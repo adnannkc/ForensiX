@@ -163,6 +163,7 @@ class TestReportingLayer(unittest.TestCase):
         self.assertEqual(report.metadata.case_name, "Incident Response Triage")
         self.assertEqual(report.metadata.investigator, "Lead Analyst")
         self.assertEqual(report.metadata.evidence_root, "/evidence")
+        self.assertEqual(report.metadata.forensix_version, "2.0.0")
         self.assertEqual(report.total_artifacts, 5)
 
     def test_02_required_metadata_validation(self):
@@ -629,6 +630,22 @@ class TestReportingLayer(unittest.TestCase):
 
         json_text = render_json_report(report)
         self.assertIn("Targeted SSH Investigation", json_text)
+
+    def test_36_default_report_version_v2_regression(self):
+        """36. Verify default report-builder version is 2.0.0 in ReportMetadata, JSON, and HTML."""
+        report = build_forensic_report(self.collection)
+        # Prove default version in ReportMetadata is "2.0.0"
+        self.assertEqual(report.metadata.forensix_version, "2.0.0")
+
+        # Verify JSON rendering contains "forensix_version": "2.0.0"
+        json_text = render_json_report(report)
+        self.assertIn('"forensix_version": "2.0.0"', json_text)
+        parsed = json.loads(json_text)
+        self.assertEqual(parsed["metadata"]["forensix_version"], "2.0.0")
+
+        # Verify HTML rendering displays "Platform Version: 2.0.0"
+        html_text = render_html_report(report)
+        self.assertIn("Platform Version: <code>2.0.0</code>", html_text)
 
 
 if __name__ == "__main__":

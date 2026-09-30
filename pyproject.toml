@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forensix"
+version = "1.0.0"
+description = "Automated Digital Forensics and Incident Triage Platform"
+requires-python = ">=3.9"
+
+[tool.setuptools.packages.find]
+where = ["src"]

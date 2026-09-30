@@ -4,7 +4,7 @@ V1 - Evidence Foundation
 V2 - Host & System Artifacts
 """
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 # V1 Core Exports
 from forensix.hasher import compute_hashes

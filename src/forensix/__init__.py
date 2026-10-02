@@ -179,6 +179,75 @@ from forensix.triage_orchestrator import (
     sort_audit_events,
 )
 
+# V3.1 Timeline Event Model Exports
+from forensix.timeline_models import (
+    TimelineCategory,
+    TimelineEvent,
+    create_timeline_event,
+    generate_timeline_id,
+)
+
+# V3.2 Timestamp Normalization Exports
+from forensix.timestamp_normalizer import (
+    NormalizedTimestamp,
+    format_iso_timestamp,
+    is_timezone_aware,
+    normalize_timestamp,
+    parse_timestamp,
+)
+
+# V3.3 Artifact Adapters Exports
+from forensix.artifact_adapters import (
+    BaseArtifactAdapter,
+    FilesystemAdapter,
+    LogAdapter,
+    AuthenticationAdapter,
+    can_adapt_artifact,
+    adapt_artifact,
+    adapt_filesystem_artifact,
+    adapt_log_artifact,
+    adapt_auth_artifact,
+    adapt_artifacts,
+    compute_deterministic_artifact_id,
+)
+
+# V3.4 Timeline Reconstruction Exports
+from forensix.timeline_reconstruction import (
+    TimestampClass,
+    classify_timestamp,
+    timeline_sort_key,
+    compute_event_fingerprint,
+    ReconstructedTimeline,
+    TimelineReconstructor,
+    reconstruct_timeline,
+    order_timeline_events,
+)
+
+# V3.5 Timeline Querying Exports
+from forensix.timeline_query import (
+    TimelineQuery,
+    TimelineQueryResult,
+    query_timeline,
+)
+
+# V3.6 Timeline Reporting Exports
+from forensix.timeline_reporting import (
+    TimelineReport,
+    generate_timeline_report,
+    render_timeline_json,
+    render_timeline_html,
+    write_timeline_json_report,
+    write_timeline_html_report,
+    serialize_timeline_event,
+)
+
+# V3.7 Timeline CLI Exports
+from forensix.timeline_cli import (
+    build_timeline_parser,
+    execute_timeline_cli,
+    timeline_main,
+)
+
 __all__ = [
     # V1
     "__version__",
@@ -319,4 +388,52 @@ __all__ = [
     "build_triage_parser",
     "triage_main",
     "execute_triage_cli",
+    # V3.1
+    "TimelineCategory",
+    "TimelineEvent",
+    "create_timeline_event",
+    "generate_timeline_id",
+    # V3.2
+    "NormalizedTimestamp",
+    "format_iso_timestamp",
+    "is_timezone_aware",
+    "normalize_timestamp",
+    "parse_timestamp",
+    # V3.3
+    "BaseArtifactAdapter",
+    "FilesystemAdapter",
+    "LogAdapter",
+    "AuthenticationAdapter",
+    "can_adapt_artifact",
+    "adapt_artifact",
+    "adapt_filesystem_artifact",
+    "adapt_log_artifact",
+    "adapt_auth_artifact",
+    "adapt_artifacts",
+    "compute_deterministic_artifact_id",
+    # V3.4
+    "TimestampClass",
+    "classify_timestamp",
+    "timeline_sort_key",
+    "compute_event_fingerprint",
+    "ReconstructedTimeline",
+    "TimelineReconstructor",
+    "reconstruct_timeline",
+    "order_timeline_events",
+    # V3.5
+    "TimelineQuery",
+    "TimelineQueryResult",
+    "query_timeline",
+    # V3.6
+    "TimelineReport",
+    "generate_timeline_report",
+    "render_timeline_json",
+    "render_timeline_html",
+    "write_timeline_json_report",
+    "write_timeline_html_report",
+    "serialize_timeline_event",
+    # V3.7
+    "build_timeline_parser",
+    "execute_timeline_cli",
+    "timeline_main",
 ]

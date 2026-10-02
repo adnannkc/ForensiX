@@ -20,6 +20,11 @@ from forensix.triage_models import (
     TriageStage,
     TriageStageStatus,
 )
+from forensix.timeline_cli import (
+    build_timeline_parser,
+    execute_timeline_cli,
+    timeline_main,
+)
 from forensix.triage_orchestrator import TriageOrchestrator
 
 
@@ -28,7 +33,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python3 -m forensix",
         description="ForensiX - Automated Digital Forensics & Incident Triage Platform (V1)",
-        epilog="Analyzes evidence files in binary read-only mode and writes JSON reports to reports/.\nFor automated multi-stage incident triage, use: python3 -m forensix triage --help",
+        epilog=(
+            "Analyzes evidence files in binary read-only mode and writes JSON reports to reports/.\n"
+            "For automated multi-stage incident triage, use: python3 -m forensix triage --help\n"
+            "For timeline reconstruction and querying, use: python3 -m forensix timeline --help"
+        ),
     )
 
     parser.add_argument(
@@ -286,6 +295,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
     if raw_args and raw_args[0] == "triage":
         return triage_main(raw_args[1:])
+    if raw_args and raw_args[0] == "timeline":
+        return timeline_main(raw_args[1:])
 
     parser = build_parser()
     args = parser.parse_args(argv)

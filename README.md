@@ -8,10 +8,11 @@ The goal of ForensiX is to automate and streamline the initial phases of digital
 
 ## Architecture Overview
 
-ForensiX provides two primary operational modes:
+ForensiX provides three primary operational modes:
 
 1. **V1 Single-File Evidence Analysis**: Point-target cryptographic hashing, metadata extraction, and JSON reporting for individual files.
 2. **V2 Automated Incident Triage**: Multi-stage, end-to-end triage orchestration across an entire Linux evidence directory, culminating in a unified host artifact model, investigation querying, multi-format reporting, and a tamper-evident audit trail.
+3. **V3 Chronological Timeline Reconstruction**: Ingests evidence, adapts extracted artifacts into factual `TimelineEvent` records (V3.3), reconstructs and deduplicates a canonical chronological timeline (V3.4), applies multi-criteria query filters (V3.5), and generates structured JSON and interactive, self-contained HTML forensic timeline reports (V3.6) orchestrated via CLI (V3.7).
 
 ### V2 Canonical Triage Pipeline
 
@@ -39,6 +40,34 @@ Evidence Directory
 TriageResult
 ```
 
+### V3 Timeline Reconstruction Pipeline
+
+```text
+Evidence Directory
+       ↓
+Existing Evidence Analysis (V2 Triage Orchestrator)
+       ↓
+Extracted Forensic Artifacts (HostArtifactCollection)
+       ↓
+V3.3 Artifact Adapters (Filesystem, Log, Auth)
+       ↓
+TimelineEvent (V3.1 Factual Observation Model)
+       ↓
+V3.4 Timeline Reconstruction (Chronological Order & Deduplication)
+       ↓
+ReconstructedTimeline (Canonical Timeline)
+       ↓
+V3.5 Timeline Querying (Optional Multi-Criteria AND Filter)
+       ↓
+TimelineQueryResult
+       ↓
+V3.6 Timeline Reporting (Structured Model)
+       ↓
+V3.7 Timeline CLI (Orchestration & Status)
+       ↓
+JSON / HTML Reports on Disk
+```
+
 ---
 
 ## Features
@@ -61,6 +90,16 @@ TriageResult
 - **Multi-Format Reporting & Audit Trail (V2.8)**: Generates valid JSON, RFC 4180 CSV, and standalone HTML5 reports with embedded CSS and strict XSS escaping. Maintains a tamper-evident, append-only `AuditEvent` trail.
 - **Automated End-to-End Orchestrator (V2.9)**: Manages stage execution with dependency cascades, failure isolation, partial execution handling, source traceability (`AUTH -> EVT -> ART`), CLI interface, safety controls, determinism, and idempotent execution.
 - **Final Release & Validation (V2.10)**: Clean, reproducible release with 100% test pass rate across the full 434-test regression suite.
+
+### V3 — Chronological Timeline Reconstruction (Implemented Milestone)
+- **Timeline Event Model (V3.1)**: Immutable, factual observation model (`TimelineEvent`) with `event_id` (`TIMELINE-<UUIDv4>`), explicit timestamps, source metadata, provenance tracking, and strict rejection of speculative conclusions.
+- **Timestamp Normalization Engine (V3.2)**: Forensically sound, deterministic parser for ISO 8601, RFC 3339, syslog, and common timestamp representations into canonical UTC datetimes while keeping timezone-naive inputs naive.
+- **Artifact Adapters (V3.3)**: Pure adapter layer converting filesystem records, syslog entries, and authentication records into `TimelineEvent` records without duplicating analysis or parsers.
+- **Timeline Reconstruction & Ordering (V3.4)**: Chronological ordering, deterministic tie-breaking, duplicate detection, and proven idempotency: `reconstruct(reconstruct(events)) == reconstruct(events)`.
+- **Timeline Query Engine (V3.5)**: High-performance in-memory filtering supporting start/end timestamps, category, event_type, source_path, tracking IDs, and substring search with strict logical AND semantics.
+- **Timeline Reporting (V3.6)**: Structured, deterministic JSON reports and self-contained, air-gap-safe HTML5 reports with strict XSS sanitization.
+- **Timeline CLI Integration (V3.7)**: `python3 -m forensix timeline <evidence_dir>` CLI orchestration with flexible formatting, filtering, and case metadata options.
+- **Final Hardening & Verification (V3.8)**: Complete test coverage (667 tests passing), evidence SHA-256 immutability verification, offline/safety auditing, and release readiness.
 
 ---
 
@@ -110,7 +149,49 @@ ForensiX 2.0.0
 
 ## Command-Line Usage
 
-### 1. Automated Incident Triage (V2 Mode)
+### 1. Chronological Timeline Reconstruction (V3 Mode)
+
+Reconstruct an immutable chronological timeline from evidence artifacts and generate structured JSON or interactive HTML reports:
+
+```bash
+python3 -m forensix timeline <evidence_directory> [OPTIONS]
+```
+
+#### Supported Timeline Options
+
+| Option | Description |
+| :--- | :--- |
+| `evidence_directory` | Positional argument: path to evidence directory. |
+| `--case-id CASE_ID` | Incident tracking identifier (e.g. `CASE-2026-001`). |
+| `--case-name CASE_NAME` | Human-readable title for the investigation. |
+| `--investigator NAME` | Name or identifier of the forensic investigator. |
+| `-o`, `--output PATH` | Explicit output file path for generated report. |
+| `--format {html,json}` | Report format: `html` (default) or `json`. |
+| `--start TIMESTAMP` | Filter events on or after ISO 8601 timestamp (inclusive). |
+| `--end TIMESTAMP` | Filter events on or before ISO 8601 timestamp (inclusive). |
+| `--category CATEGORY` | Filter by category (`FILESYSTEM`, `LOG`, `AUTHENTICATION`, `ACCOUNT`, `PERSISTENCE`). |
+| `--event-type TYPE` | Exact match for event type classification. |
+| `--source-path PATH` | Exact match for evidence source file path. |
+| `--source-artifact-id ID` | Filter by parent forensic artifact tracking ID. |
+| `--source-event-id ID` | Filter by underlying specialized event ID. |
+| `--text SUBSTRING` | Substring search across descriptions, raw lines, and attributes. |
+| `--case-sensitive` | Enable case-sensitive matching for text queries. |
+| `-v`, `--version` | Display program version and exit. |
+| `-h`, `--help` | Show command-line help message and exit. |
+
+#### Example Timeline Run
+
+```bash
+python3 -m forensix timeline /mnt/evidence/host_01/ \
+    --case-id CASE-2026-001 \
+    --category AUTHENTICATION \
+    --format html \
+    --output ./reports/auth_timeline.html
+```
+
+---
+
+### 2. Automated Incident Triage (V2 Mode)
 
 Execute end-to-end triage against an evidence directory containing collected host artifacts:
 
@@ -181,7 +262,7 @@ Generated Reports:
 
 ---
 
-### 2. Single-File Analysis (V1 Compatibility Mode)
+### 3. Single-File Analysis (V1 Compatibility Mode)
 
 Analyze an individual evidence file for cryptographic integrity and file metadata:
 
@@ -229,10 +310,18 @@ ForensiX generates three standalone, standardized report formats:
 
 ```text
 ForensiX/
-├── pyproject.toml              # Package configuration and build metadata (version 2.0.0)
+├── pyproject.toml              # Package configuration and build metadata (version 2.0.1)
 ├── README.md                   # Complete platform documentation
-├── docs/                       # Architectural documentation and reviews
-│   └── V1_REVIEW.md            # V1 implementation and scope review
+├── docs/                       # Architectural documentation and milestone specifications
+│   ├── V1_REVIEW.md            # V1 implementation and scope review
+│   ├── V3_1_TIMELINE_EVENT_MODEL.md
+│   ├── V3_2_TIMESTAMP_NORMALIZATION.md
+│   ├── V3_3_ARTIFACT_ADAPTERS.md
+│   ├── V3_4_TIMELINE_RECONSTRUCTION.md
+│   ├── V3_5_TIMELINE_QUERYING.md
+│   ├── V3_6_TIMELINE_REPORTING.md
+│   ├── V3_7_CLI_INTEGRATION.md
+│   └── V3_8_FINAL_VERIFICATION.md
 ├── evidence/                   # Working evidence directory (gitignored)
 │   └── .gitkeep
 ├── reports/                    # Generated forensic reports directory (gitignored)
@@ -267,8 +356,15 @@ ForensiX/
 │       ├── report_csv.py       # V2.8 CSV report serializer
 │       ├── report_html.py      # V2.8 standalone HTML serializer
 │       ├── triage_models.py    # V2.9 triage configuration and stage models
-│       └── triage_orchestrator.py # V2.9 9-stage pipeline orchestrator
-└── tests/                      # Comprehensive automated test suite (434 tests)
+│       ├── triage_orchestrator.py # V2.9 9-stage pipeline orchestrator
+│       ├── timeline_models.py     # V3.1 factual observation model
+│       ├── timestamp_normalizer.py# V3.2 timestamp normalization
+│       ├── artifact_adapters.py   # V3.3 forensic artifact adapters
+│       ├── timeline_reconstruction.py # V3.4 chronological ordering & deduplication
+│       ├── timeline_query.py      # V3.5 multi-criteria query engine
+│       ├── timeline_reporting.py  # V3.6 structured JSON & HTML reporting
+│       └── timeline_cli.py        # V3.7 timeline CLI orchestration
+└── tests/                      # Comprehensive automated test suite (667 tests)
     ├── test_hasher.py
     ├── test_analyzer.py
     ├── test_evidence.py
@@ -294,7 +390,15 @@ ForensiX/
     ├── test_triage_safety.py
     ├── test_triage_determinism.py
     ├── test_triage_idempotency.py
-    └── test_triage_final_validation.py
+    ├── test_triage_final_validation.py
+    ├── test_timeline_models.py
+    ├── test_timestamp_normalizer.py
+    ├── test_artifact_adapters.py
+    ├── test_timeline_reconstruction.py
+    ├── test_timeline_query.py
+    ├── test_timeline_reporting.py
+    ├── test_timeline_cli.py
+    └── test_timeline_v3_hardening.py
 ```
 
 ---
@@ -312,8 +416,8 @@ PYTHONPATH=src python3 -m pytest tests/ -v
 ```
 
 ### Validation Metrics
-- **Test Methods**: 434
-- **Subtests**: 72
+- **Test Methods**: 667
+- **Subtests**: 162
 - **Failures**: 0
 - **Errors**: 0
 - **Pass Rate**: 100%
@@ -325,14 +429,15 @@ PYTHONPATH=src python3 -m pytest tests/ -v
 - **Safety Auditing**: Monitored verification of zero file mutations, zero subprocess execution, zero network access, and output directory isolation.
 - **Determinism & Idempotency**: Normalized multi-run comparisons ensuring identical classifications and zero memory leakage.
 - **Failure Injection**: Testing all 9 stage failure cascades (Scenarios A through K) confirming proper isolation and `SKIPPED` downstream states.
+- **Timeline Reconstruction Integrity**: Ordering verification, cross-timezone instant synchronization, deduplication fingerprinting, idempotency guarantees, and strict XSS sanitization in HTML reporting.
 
 ---
 
 ## Scope & Limitations
 
-To ensure transparency and maintain forensic rigor, the boundaries of ForensiX V2 are explicitly defined:
+To ensure transparency and maintain forensic rigor, the boundaries of ForensiX are explicitly defined:
 
-### Implemented in V2.0.0
+### Implemented in ForensiX
 - Linux evidence ingestion and registration
 - Filesystem artifact discovery and metadata extraction
 - Linux syslog and authentication activity parsing
@@ -342,8 +447,13 @@ To ensure transparency and maintain forensic rigor, the boundaries of ForensiX V
 - In-memory investigation querying and filtering
 - Multi-format reporting (JSON, CSV, HTML) and tamper-evident audit logging
 - Deterministic, safe, automated end-to-end triage orchestration
+- Chronological timeline event modeling, timestamp normalization, and multi-source artifact adaptation
+- Deterministic timeline reconstruction, tie-breaking, and deduplication
+- Multi-criteria timeline querying with strict logical AND filtering
+- Standalone HTML5 timeline reporting (self-contained, zero CDN/network dependencies) and deterministic JSON reporting
+- Dedicated Timeline CLI integration (`python3 -m forensix timeline`)
 
-### Future / Not Implemented in V2.0.0
+### Explicitly Excluded / Non-Goals
 - **Malware Analysis / Classification**: ForensiX extracts and organizes host state; it does not classify binaries or declare malware infections.
 - **YARA / Signature Scanning**: Rule-based pattern matching against files or memory.
 - **Threat Intelligence**: External threat feeds, IP reputation checks, or CVE lookups.
@@ -371,7 +481,15 @@ To ensure transparency and maintain forensic rigor, the boundaries of ForensiX V
   - [x] V2.8 — Multi-format reporting + audit trail
   - [x] V2.9 — Automated end-to-end triage orchestration
   - [x] V2.10 — Final validation, cleanup, and v2.0.0 release
-- [ ] **V3 — Timeline Reconstruction & Temporal Sequencing (Planned)**
+- [x] **V3 — Timeline Reconstruction & Temporal Sequencing (Completed Locally — V3.1–V3.8 — Release Ready)**
+  - [x] V3.1 — Timeline event model
+  - [x] V3.2 — Timestamp normalization engine
+  - [x] V3.3 — Artifact adapters (filesystem, logs, authentication)
+  - [x] V3.4 — Timeline reconstruction, ordering & deduplication
+  - [x] V3.5 — Timeline querying & multi-criteria filtering
+  - [x] V3.6 — Timeline reporting (structured JSON & standalone HTML)
+  - [x] V3.7 — CLI integration (`python3 -m forensix timeline`)
+  - [x] V3.8 — Final verification, hardening & release readiness *(Local milestone complete; release pending)*
 - [ ] **V4 — Event Correlation & Rule-Based Detection (Planned)**
 - [ ] **V5 — Network & PCAP Forensics (Planned)**
 - [ ] **V6 — Memory Dump Forensics (Planned)**

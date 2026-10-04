@@ -33,7 +33,7 @@ def build_forensic_report(
     case_name: Optional[str] = None,
     investigator: Optional[str] = None,
     evidence_root: Optional[str] = None,
-    forensix_version: str = "2.0.1",
+    forensix_version: str = "4.0.0",
     created_at: Optional[str] = None,
     audit_trail: Optional[Sequence[AuditEvent]] = None,
     record_generation_audit: bool = True,

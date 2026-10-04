@@ -913,7 +913,11 @@ class TriageOrchestrator:
 
         for log_path in discovered_log_paths:
             art_id = art_id_by_path.get(str(log_path.resolve())) or art_id_by_path.get(str(log_path))
-            parse_res = parse_log_file(log_path, artifact_id=art_id)
+            parse_res = parse_log_file(
+                log_path,
+                artifact_id=art_id,
+                log_timestamp_year=ctx.config.log_timestamp_year,
+            )
             ctx.log_results.append(parse_res)
             parsed_events.extend(parse_res.events)
             if parse_res.error_lines > 0:
@@ -938,7 +942,10 @@ class TriageOrchestrator:
 
     def _execute_authentication_analysis(self, ctx: StageExecutionContext) -> TriageStageResult:
         """Stage 4: Authentication Activity Analysis."""
-        auth_result = extract_authentication_activity(ctx.log_events)
+        auth_result = extract_authentication_activity(
+            ctx.log_events,
+            log_timestamp_year=ctx.config.log_timestamp_year,
+        )
         ctx.auth_result = auth_result
 
         return TriageStageResult(

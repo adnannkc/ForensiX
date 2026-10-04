@@ -256,6 +256,7 @@ def log_event_to_auth_record(log_event: LogEvent) -> Optional[AuthenticationReco
 def stream_authentication_activity(
     file_path: Union[str, Path],
     artifact_id: Optional[str] = None,
+    log_timestamp_year: Optional[int] = None,
 ) -> Iterator[AuthenticationRecord]:
     """
     Stream structured AuthenticationRecord instances line-by-line from a log file.
@@ -263,7 +264,7 @@ def stream_authentication_activity(
     Memory bounded: Suitable for gigabyte-scale logs without full memory loading.
     """
     target = Path(file_path).resolve()
-    for log_event in stream_log_events(target, artifact_id=artifact_id):
+    for log_event in stream_log_events(target, artifact_id=artifact_id, log_timestamp_year=log_timestamp_year):
         auth_record = log_event_to_auth_record(log_event)
         if auth_record is not None:
             yield auth_record
@@ -272,6 +273,7 @@ def stream_authentication_activity(
 def extract_authentication_activity(
     source: Union[str, Path, Iterable[LogEvent]],
     artifact_id: Optional[str] = None,
+    log_timestamp_year: Optional[int] = None,
 ) -> AuthenticationActivityResult:
     """
     Extract authentication activity from a log file or an existing iterable of LogEvents.
@@ -279,6 +281,7 @@ def extract_authentication_activity(
     Args:
         source: File path (str or Path) or an iterable of LogEvent records.
         artifact_id: Optional tracking identifier for the source artifact.
+        log_timestamp_year: Optional explicit calendar year context for BSD syslog timestamps.
 
     Returns:
         AuthenticationActivityResult: Complete immutable collection of authentication activity.
@@ -290,7 +293,7 @@ def extract_authentication_activity(
     if isinstance(source, (str, Path)):
         target = Path(source).resolve()
         source_path = str(target)
-        records = list(stream_authentication_activity(target, artifact_id=artifact_id))
+        records = list(stream_authentication_activity(target, artifact_id=artifact_id, log_timestamp_year=log_timestamp_year))
     elif isinstance(source, Iterable):
         source_path = "iterable"
         records_list = []

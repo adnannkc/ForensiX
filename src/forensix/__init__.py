@@ -4,7 +4,7 @@ V1 - Evidence Foundation
 V2 - Host & System Artifacts
 """
 
-__version__ = "2.0.1"
+__version__ = "4.0.0"
 
 # V1 Core Exports
 from forensix.hasher import compute_hashes
@@ -192,6 +192,7 @@ from forensix.timestamp_normalizer import (
     NormalizedTimestamp,
     format_iso_timestamp,
     is_timezone_aware,
+    normalize_bsd_timestamp,
     normalize_timestamp,
     parse_timestamp,
 )
@@ -246,6 +247,107 @@ from forensix.timeline_cli import (
     build_timeline_parser,
     execute_timeline_cli,
     timeline_main,
+)
+
+# V4.1 Correlation Model Exports
+from forensix.correlation_models import (
+    Correlation,
+    CorrelationCollection,
+    CorrelationType,
+    RelationshipType,
+    compute_deterministic_correlation_id,
+    create_correlation,
+    generate_correlation_id,
+)
+
+# V4.2 Correlation Engine Exports
+from forensix.correlation_engine import (
+    DEFAULT_TIME_WINDOW_SECONDS,
+    CorrelationConfig,
+    CorrelationEngine,
+    correlate_events,
+    compute_timestamp_delta,
+    extract_user_identity,
+    extract_source_identity,
+    extract_path_identity,
+    extract_session_identity,
+)
+
+# V4.3 Rule Model Exports
+from forensix.rule_models import (
+    ConditionOperator,
+    DetectionRule,
+    Rule,
+    RuleCollection,
+    RuleCondition,
+    compute_deterministic_rule_id,
+    create_rule,
+)
+
+# V4.4 Detection Engine Exports
+from forensix.detection_engine import (
+    DetectionResult,
+    DetectionResultCollection,
+    DetectionEngine,
+    evaluate_rule,
+    evaluate_rules,
+    compute_deterministic_detection_id,
+    detection_sort_key,
+    resolve_field_value,
+    evaluate_condition_operator,
+)
+
+# V4.5 Initial Detection Rules Exports
+from forensix.initial_rules import (
+    DEFAULT_INITIAL_RULE_TIME_WINDOW_SECONDS,
+    RULE_NAME_SSH_AUTH_SUDO,
+    RULE_NAME_REPEATED_SSH_FAILURE_SUCCESS,
+    RULE_NAME_ACCOUNT_PRIVILEGE,
+    RULE_NAME_PERSISTENCE_FOLLOWUP,
+    create_ssh_auth_sudo_rule,
+    create_repeated_ssh_failure_success_rule,
+    create_account_privilege_rule,
+    create_persistence_followup_rule,
+    create_initial_rules,
+    get_initial_rules,
+)
+
+# V4.6 Correlation & Detection Reporting Exports
+from forensix.correlation_reporting import (
+    CorrelationReport,
+    serialize_correlation,
+    generate_correlation_report,
+    render_correlation_json,
+    write_correlation_json_report,
+    render_correlation_html,
+    write_correlation_html_report,
+)
+from forensix.detection_reporting import (
+    DetectionReport,
+    CorrelationDetectionReport,
+    InvestigationReport,
+    serialize_detection,
+    generate_detection_report,
+    render_detection_json,
+    write_detection_json_report,
+    render_detection_html,
+    write_detection_html_report,
+    generate_correlation_detection_report,
+    generate_investigation_report,
+    render_correlation_detection_json,
+    write_correlation_detection_json_report,
+    render_correlation_detection_html,
+    write_correlation_detection_html_report,
+)
+
+# V4.7 CLI / Triage Integration Exports
+from forensix.triage_cli import (
+    build_investigation_parser,
+    execute_investigation_cli,
+    investigation_main,
+    build_v4_triage_parser,
+    execute_triage_v4_cli,
+    triage_v4_main,
 )
 
 __all__ = [
@@ -397,6 +499,7 @@ __all__ = [
     "NormalizedTimestamp",
     "format_iso_timestamp",
     "is_timezone_aware",
+    "normalize_bsd_timestamp",
     "normalize_timestamp",
     "parse_timestamp",
     # V3.3
@@ -436,4 +539,82 @@ __all__ = [
     "build_timeline_parser",
     "execute_timeline_cli",
     "timeline_main",
+    # V4.1
+    "Correlation",
+    "CorrelationCollection",
+    "CorrelationType",
+    "RelationshipType",
+    "compute_deterministic_correlation_id",
+    "create_correlation",
+    "generate_correlation_id",
+    # V4.2
+    "DEFAULT_TIME_WINDOW_SECONDS",
+    "CorrelationConfig",
+    "CorrelationEngine",
+    "correlate_events",
+    "compute_timestamp_delta",
+    "extract_user_identity",
+    "extract_source_identity",
+    "extract_path_identity",
+    "extract_session_identity",
+    # V4.3
+    "ConditionOperator",
+    "DetectionRule",
+    "Rule",
+    "RuleCollection",
+    "RuleCondition",
+    "compute_deterministic_rule_id",
+    "create_rule",
+    # V4.4
+    "DetectionResult",
+    "DetectionResultCollection",
+    "DetectionEngine",
+    "evaluate_rule",
+    "evaluate_rules",
+    "compute_deterministic_detection_id",
+    "detection_sort_key",
+    "resolve_field_value",
+    "evaluate_condition_operator",
+    # V4.5
+    "DEFAULT_INITIAL_RULE_TIME_WINDOW_SECONDS",
+    "RULE_NAME_SSH_AUTH_SUDO",
+    "RULE_NAME_REPEATED_SSH_FAILURE_SUCCESS",
+    "RULE_NAME_ACCOUNT_PRIVILEGE",
+    "RULE_NAME_PERSISTENCE_FOLLOWUP",
+    "create_ssh_auth_sudo_rule",
+    "create_repeated_ssh_failure_success_rule",
+    "create_account_privilege_rule",
+    "create_persistence_followup_rule",
+    "create_initial_rules",
+    "get_initial_rules",
+    # V4.6
+    "CorrelationReport",
+    "serialize_correlation",
+    "generate_correlation_report",
+    "render_correlation_json",
+    "write_correlation_json_report",
+    "render_correlation_html",
+    "write_correlation_html_report",
+    "DetectionReport",
+    "CorrelationDetectionReport",
+    "InvestigationReport",
+    "serialize_detection",
+    "generate_detection_report",
+    "render_detection_json",
+    "write_detection_json_report",
+    "render_detection_html",
+    "write_detection_html_report",
+    "generate_correlation_detection_report",
+    "generate_investigation_report",
+    "render_correlation_detection_json",
+    "write_correlation_detection_json_report",
+    "render_correlation_detection_html",
+    "write_correlation_detection_html_report",
+    # V4.7
+    "build_investigation_parser",
+    "execute_investigation_cli",
+    "investigation_main",
+    "build_v4_triage_parser",
+    "execute_triage_v4_cli",
+    "triage_v4_main",
 ]

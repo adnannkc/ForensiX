@@ -81,6 +81,80 @@ def _extract_offset_str(clean_str: str) -> Optional[str]:
     return None
 
 
+_BSD_MONTH_MAP: Dict[str, int] = {
+    "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+    "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
+}
+
+_RE_BSD_TIMESTAMP = re.compile(
+    r"^([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?$"
+)
+
+
+def normalize_bsd_timestamp(
+    raw_timestamp: str,
+    log_timestamp_year: Optional[int] = None,
+) -> Optional[datetime]:
+    """
+    Normalize a traditional RFC 3164 BSD syslog timestamp with an explicit year context.
+
+    BSD syslog headers format timestamps as 'Mmm dd hh:mm:ss' (e.g. 'Sep 30 10:00:00')
+    without a year component. ForensiX never guesses or infers a year automatically.
+    When a forensic investigator explicitly provides a known calendar year context via
+    log_timestamp_year, this function deterministically reconstructs a timezone-naive datetime.
+
+    Args:
+        raw_timestamp: BSD syslog timestamp string (e.g. 'Sep 30 10:00:00').
+        log_timestamp_year: Explicit integer year (1 to 9999). If None, returns None.
+
+    Returns:
+        Optional[datetime]: Canonical timezone-naive datetime, or None if no year is provided,
+            the timestamp string is malformed, or the date is invalid (e.g. Feb 29 on non-leap year).
+    """
+    if log_timestamp_year is None:
+        return None
+
+    if not isinstance(log_timestamp_year, int):
+        try:
+            log_timestamp_year = int(log_timestamp_year)
+        except (ValueError, TypeError):
+            return None
+
+    if not (1 <= log_timestamp_year <= 9999):
+        return None
+
+    if not isinstance(raw_timestamp, str):
+        return None
+
+    clean = raw_timestamp.strip()
+    if not clean:
+        return None
+
+    match = _RE_BSD_TIMESTAMP.match(clean)
+    if not match:
+        return None
+
+    mon_str, day_str, hour_str, min_str, sec_str, frac_str = match.groups()
+    month = _BSD_MONTH_MAP.get(mon_str)
+    if month is None:
+        return None
+
+    try:
+        microsecond = int((frac_str[:6] + "000000")[:6]) if frac_str else 0
+        return datetime(
+            year=log_timestamp_year,
+            month=month,
+            day=int(day_str),
+            hour=int(hour_str),
+            minute=int(min_str),
+            second=int(sec_str),
+            microsecond=microsecond,
+        )
+    except ValueError:
+        # Invalid calendar date (e.g. Feb 29 on non-leap year or out-of-range day)
+        return None
+
+
 @dataclass(frozen=True)
 class NormalizedTimestamp:
     """

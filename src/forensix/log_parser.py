@@ -18,6 +18,7 @@ from forensix.log_models import (
     LogParseResult,
     generate_event_id,
 )
+from forensix.timestamp_normalizer import normalize_bsd_timestamp
 
 # Traditional RFC 3164 BSD syslog header (e.g., 'Sep 30 14:25:31 hostname sshd[1234]: message')
 # Note: BSD syslog does NOT contain a year.
@@ -100,15 +101,19 @@ def iter_log_lines(file_path: Union[str, Path]) -> Iterator[Tuple[int, str]]:
                 yield line_idx, line.rstrip("\r\n")
 
 
-def parse_syslog_header(line: str) -> Optional[Tuple[str, Optional[str], str, str, Optional[int], str]]:
+def parse_syslog_header(
+    line: str,
+    log_timestamp_year: Optional[int] = None,
+) -> Optional[Tuple[str, Optional[str], str, str, Optional[int], str]]:
     """
     Attempt to extract standard syslog header fields from a raw line.
 
     Returns:
         Optional tuple of:
         (raw_timestamp, normalized_timestamp, hostname, service, pid, raw_message)
-        where normalized_timestamp is None for BSD syslog (lacking year) or
-        the ISO string if explicitly present in RFC 5424 logs.
+        where normalized_timestamp is None for BSD syslog (lacking year) unless
+        an explicit log_timestamp_year is provided, or the ISO string if explicitly
+        present in RFC 5424 logs.
     """
     # 1. Try ISO 8601 / RFC 5424 (contains year)
     iso_match = RE_ISO_SYSLOG.match(line)
@@ -120,7 +125,7 @@ def parse_syslog_header(line: str) -> Optional[Tuple[str, Optional[str], str, st
         msg = iso_match.group(5)
         return raw_ts, raw_ts, hostname, service, pid, msg
 
-    # 2. Try BSD / RFC 3164 (lacks year; normalized_timestamp MUST remain None)
+    # 2. Try BSD / RFC 3164 (lacks year; normalized_timestamp remains None unless explicit year provided)
     bsd_match = RE_BSD_SYSLOG.match(line)
     if bsd_match:
         raw_ts = bsd_match.group(1)
@@ -128,7 +133,12 @@ def parse_syslog_header(line: str) -> Optional[Tuple[str, Optional[str], str, st
         service = bsd_match.group(3)
         pid = int(bsd_match.group(4)) if bsd_match.group(4) else None
         msg = bsd_match.group(5)
-        return raw_ts, None, hostname, service, pid, msg
+        norm_ts: Optional[str] = None
+        if log_timestamp_year is not None:
+            dt = normalize_bsd_timestamp(raw_ts, log_timestamp_year=log_timestamp_year)
+            if dt is not None:
+                norm_ts = dt.isoformat()
+        return raw_ts, norm_ts, hostname, service, pid, msg
 
     return None
 
@@ -232,6 +242,7 @@ def parse_log_line(
     line_number: int,
     source_path: str,
     source_artifact_id: Optional[str] = None,
+    log_timestamp_year: Optional[int] = None,
 ) -> LogEvent:
     """
     Parse a single raw log line into an immutable LogEvent.
@@ -258,7 +269,7 @@ def parse_log_line(
             raw_line=line,
         )
 
-    header = parse_syslog_header(line)
+    header = parse_syslog_header(line, log_timestamp_year=log_timestamp_year)
     if header is None:
         # Unrecognized syslog structure: safely preserve the entire line
         return LogEvent(
@@ -300,6 +311,7 @@ def parse_log_line(
 def stream_log_events(
     file_path: Union[str, Path],
     artifact_id: Optional[str] = None,
+    log_timestamp_year: Optional[int] = None,
 ) -> Iterator[LogEvent]:
     """
     Stream structured LogEvent records line-by-line from a log file.
@@ -316,6 +328,7 @@ def stream_log_events(
                 line_number=line_idx,
                 source_path=canonical_path,
                 source_artifact_id=artifact_id,
+                log_timestamp_year=log_timestamp_year,
             )
         except Exception:
             # Defensive catch-all to guarantee a malformed line never halts the stream
@@ -339,6 +352,7 @@ def stream_log_events(
 def parse_log_file(
     file_path: Union[str, Path],
     artifact_id: Optional[str] = None,
+    log_timestamp_year: Optional[int] = None,
 ) -> LogParseResult:
     """
     Parse an entire log evidence file and produce an aggregate LogParseResult.
@@ -346,12 +360,13 @@ def parse_log_file(
     Args:
         file_path: Path to target log file.
         artifact_id: Optional artifact ID to link with collection results.
+        log_timestamp_year: Optional explicit year context for BSD syslog timestamps.
 
     Returns:
         LogParseResult: Immutable aggregate result containing all parsed events.
     """
     target = Path(file_path).resolve()
-    events = list(stream_log_events(target, artifact_id=artifact_id))
+    events = list(stream_log_events(target, artifact_id=artifact_id, log_timestamp_year=log_timestamp_year))
 
     total_lines = len(events)
     unrecognized = sum(

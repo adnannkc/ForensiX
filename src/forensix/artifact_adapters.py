@@ -52,6 +52,7 @@ from forensix.timeline_models import (
 )
 from forensix.timestamp_normalizer import (
     NormalizedTimestamp,
+    normalize_bsd_timestamp,
     parse_timestamp,
 )
 from forensix.unified_models import HostArtifact, HostArtifactCategory
@@ -689,9 +690,12 @@ class LogAdapter(BaseArtifactAdapter):
     - Preserves source_path, line_number, source_artifact_id, source_event_id, and raw_line.
     - Normalizes timestamp via V3.2 if available; preserves raw_timestamp.
     - If timestamp cannot be normalized (e.g. yearless syslog), timestamp remains None
-      without fabricating a year or timezone.
+      unless an explicit log_timestamp_year context is provided.
     - Attributes preserve hostname, service, pid, and custom parsed attributes.
     """
+
+    def __init__(self, log_timestamp_year: Optional[int] = None) -> None:
+        self.log_timestamp_year = log_timestamp_year
 
     def can_adapt(self, artifact: Any) -> bool:
         """Check if artifact is a supported log artifact type."""
@@ -746,10 +750,12 @@ class LogAdapter(BaseArtifactAdapter):
         self,
         evt: LogEvent,
         source_artifact_id: Optional[str] = None,
+        log_timestamp_year: Optional[int] = None,
     ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from a LogEvent."""
         norm_dt: Optional[datetime] = None
         raw_ts: Optional[str] = evt.raw_timestamp
+        effective_year = log_timestamp_year if log_timestamp_year is not None else self.log_timestamp_year
 
         # Attempt normalization from normalized_timestamp first, then raw_timestamp
         target_ts_str = evt.normalized_timestamp or evt.raw_timestamp
@@ -760,8 +766,13 @@ class LogAdapter(BaseArtifactAdapter):
                 if raw_ts is None:
                     raw_ts = norm_res.raw_timestamp
             except ValueError:
-                # If target is incomplete/yearless (e.g. BSD syslog), timestamp remains None without guessing
-                norm_dt = None
+                # If target is incomplete/yearless (e.g. BSD syslog), check if explicit year is provided
+                if effective_year is not None and evt.raw_timestamp:
+                    dt = normalize_bsd_timestamp(evt.raw_timestamp, log_timestamp_year=effective_year)
+                    if dt is not None:
+                        norm_dt = dt
+                else:
+                    norm_dt = None
 
         target_art_id = source_artifact_id if source_artifact_id is not None else evt.source_artifact_id
 
@@ -792,7 +803,11 @@ class LogAdapter(BaseArtifactAdapter):
         )
         return (event,)
 
-    def _adapt_dict(self, data: Dict[str, Any]) -> Tuple[TimelineEvent, ...]:
+    def _adapt_dict(
+        self,
+        data: Dict[str, Any],
+        log_timestamp_year: Optional[int] = None,
+    ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from a log event dictionary."""
         source_path = data.get("source_path") or data.get("path")
         if not source_path:
@@ -805,6 +820,7 @@ class LogAdapter(BaseArtifactAdapter):
         raw_ts = data.get("raw_timestamp")
         target_ts = data.get("normalized_timestamp") or raw_ts
         norm_dt: Optional[datetime] = None
+        effective_year = log_timestamp_year if log_timestamp_year is not None else self.log_timestamp_year
 
         if target_ts is not None:
             try:
@@ -813,7 +829,12 @@ class LogAdapter(BaseArtifactAdapter):
                 if raw_ts is None:
                     raw_ts = norm_res.raw_timestamp
             except ValueError:
-                norm_dt = None
+                if effective_year is not None and raw_ts:
+                    dt = normalize_bsd_timestamp(str(raw_ts), log_timestamp_year=effective_year)
+                    if dt is not None:
+                        norm_dt = dt
+                else:
+                    norm_dt = None
 
         attrs = dict(data.get("attributes", {}))
         for key in ("service", "pid", "hostname"):
@@ -854,6 +875,9 @@ class AuthenticationAdapter(BaseArtifactAdapter):
     - Normalizes timestamp via V3.2 if available; preserves raw_timestamp.
     - Attributes preserve username, source_ip, source_port, authentication_method, status, service, hostname.
     """
+
+    def __init__(self, log_timestamp_year: Optional[int] = None) -> None:
+        self.log_timestamp_year = log_timestamp_year
 
     def can_adapt(self, artifact: Any) -> bool:
         """Check if artifact is a supported authentication artifact type."""
@@ -907,10 +931,12 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         self,
         auth: AuthenticationRecord,
         source_artifact_id: Optional[str] = None,
+        log_timestamp_year: Optional[int] = None,
     ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from an AuthenticationRecord."""
         norm_dt: Optional[datetime] = None
         raw_ts: Optional[str] = auth.raw_timestamp
+        effective_year = log_timestamp_year if log_timestamp_year is not None else self.log_timestamp_year
 
         target_ts_str = auth.normalized_timestamp or auth.raw_timestamp
         if target_ts_str is not None:
@@ -920,7 +946,12 @@ class AuthenticationAdapter(BaseArtifactAdapter):
                 if raw_ts is None:
                     raw_ts = norm_res.raw_timestamp
             except ValueError:
-                norm_dt = None
+                if effective_year is not None and auth.raw_timestamp:
+                    dt = normalize_bsd_timestamp(auth.raw_timestamp, log_timestamp_year=effective_year)
+                    if dt is not None:
+                        norm_dt = dt
+                else:
+                    norm_dt = None
 
         target_art_id = source_artifact_id if source_artifact_id is not None else auth.source_artifact_id
 
@@ -961,7 +992,11 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         )
         return (event,)
 
-    def _adapt_dict(self, data: Dict[str, Any]) -> Tuple[TimelineEvent, ...]:
+    def _adapt_dict(
+        self,
+        data: Dict[str, Any],
+        log_timestamp_year: Optional[int] = None,
+    ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from an authentication dictionary."""
         source_path = data.get("source_path") or data.get("path")
         if not source_path:
@@ -974,6 +1009,7 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         raw_ts = data.get("raw_timestamp")
         target_ts = data.get("normalized_timestamp") or raw_ts
         norm_dt: Optional[datetime] = None
+        effective_year = log_timestamp_year if log_timestamp_year is not None else self.log_timestamp_year
 
         if target_ts is not None:
             try:
@@ -982,7 +1018,12 @@ class AuthenticationAdapter(BaseArtifactAdapter):
                 if raw_ts is None:
                     raw_ts = norm_res.raw_timestamp
             except ValueError:
-                norm_dt = None
+                if effective_year is not None and raw_ts:
+                    dt = normalize_bsd_timestamp(str(raw_ts), log_timestamp_year=effective_year)
+                    if dt is not None:
+                        norm_dt = dt
+                else:
+                    norm_dt = None
 
         attrs = dict(data.get("attributes", {}))
         for key in ("username", "source_ip", "source_port", "authentication_method", "status", "service", "hostname"):
@@ -1100,6 +1141,7 @@ def adapt_auth_artifact(artifact: Any) -> Tuple[TimelineEvent, ...]:
 def adapt_artifacts(
     artifacts: Sequence[Any],
     ignore_unsupported: bool = False,
+    log_timestamp_year: Optional[int] = None,
 ) -> Tuple[TimelineEvent, ...]:
     """
     Adapt a sequence of forensic artifacts into an immutable tuple of TimelineEvents.
@@ -1115,6 +1157,7 @@ def adapt_artifacts(
         artifacts: Sequence of forensic artifacts.
         ignore_unsupported: If True, skip unsupported artifacts silently.
                            If False (default), raise TypeError on unsupported artifacts.
+        log_timestamp_year: Optional explicit calendar year context for BSD syslog timestamps.
 
     Returns:
         Tuple[TimelineEvent, ...]: Immutable tuple of extracted events in sequence.
@@ -1175,7 +1218,11 @@ def adapt_artifacts(
                 resolved_art_id = v2_to_det_id[art.source_artifact_id]
             elif art.source_path and _normalize_evidence_path(art.source_path) in path_to_det_id:
                 resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
-            events = _DEFAULT_LOG_ADAPTER._adapt_log_event(art, source_artifact_id=resolved_art_id)
+            events = _DEFAULT_LOG_ADAPTER._adapt_log_event(
+                art,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+            )
         elif isinstance(art, HostArtifact) and isinstance(art.specialized_payload, LogEvent):
             log_payload = art.specialized_payload
             resolved_art_id = None
@@ -1186,14 +1233,22 @@ def adapt_artifacts(
                 resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
             elif log_payload.source_path and _normalize_evidence_path(log_payload.source_path) in path_to_det_id:
                 resolved_art_id = path_to_det_id[_normalize_evidence_path(log_payload.source_path)]
-            events = _DEFAULT_LOG_ADAPTER._adapt_log_event(log_payload, source_artifact_id=resolved_art_id)
+            events = _DEFAULT_LOG_ADAPTER._adapt_log_event(
+                log_payload,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+            )
         elif isinstance(art, AuthenticationRecord):
             resolved_art_id = None
             if art.source_artifact_id and art.source_artifact_id in v2_to_det_id:
                 resolved_art_id = v2_to_det_id[art.source_artifact_id]
             elif art.source_path and _normalize_evidence_path(art.source_path) in path_to_det_id:
                 resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
-            events = _DEFAULT_AUTH_ADAPTER._adapt_auth_record(art, source_artifact_id=resolved_art_id)
+            events = _DEFAULT_AUTH_ADAPTER._adapt_auth_record(
+                art,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+            )
         elif isinstance(art, HostArtifact) and isinstance(art.specialized_payload, AuthenticationRecord):
             auth_payload = art.specialized_payload
             resolved_art_id = None
@@ -1204,7 +1259,11 @@ def adapt_artifacts(
                 resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
             elif auth_payload.source_path and _normalize_evidence_path(auth_payload.source_path) in path_to_det_id:
                 resolved_art_id = path_to_det_id[_normalize_evidence_path(auth_payload.source_path)]
-            events = _DEFAULT_AUTH_ADAPTER._adapt_auth_record(auth_payload, source_artifact_id=resolved_art_id)
+            events = _DEFAULT_AUTH_ADAPTER._adapt_auth_record(
+                auth_payload,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+            )
         else:
             events = adapt_artifact(art)
 

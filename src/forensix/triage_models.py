@@ -91,6 +91,7 @@ class TriageConfig:
     report_formats: Tuple[str, ...] = (ReportFormat.JSON.value, ReportFormat.CSV.value, ReportFormat.HTML.value)
     skip_reports: bool = False
     collect_audit: bool = True
+    log_timestamp_year: Optional[int] = None
 
     def __post_init__(self) -> None:
         """Validate configuration parameters strictly."""
@@ -159,6 +160,16 @@ class TriageConfig:
         if not isinstance(self.collect_audit, bool):
             raise TypeError(f"collect_audit must be bool, got {type(self.collect_audit).__name__}")
 
+        if self.log_timestamp_year is not None:
+            if not isinstance(self.log_timestamp_year, int):
+                try:
+                    year_val = int(self.log_timestamp_year)
+                    object.__setattr__(self, "log_timestamp_year", year_val)
+                except (ValueError, TypeError) as err:
+                    raise TypeError(f"log_timestamp_year must be an int or None, got {type(self.log_timestamp_year).__name__}") from err
+            if not (1 <= self.log_timestamp_year <= 9999):
+                raise ValueError(f"log_timestamp_year must be between 1 and 9999, got {self.log_timestamp_year}")
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to a fully JSON-serializable dictionary."""
         return {
@@ -171,6 +182,7 @@ class TriageConfig:
             "report_formats": list(self.report_formats),
             "skip_reports": self.skip_reports,
             "collect_audit": self.collect_audit,
+            "log_timestamp_year": self.log_timestamp_year,
         }
 
 

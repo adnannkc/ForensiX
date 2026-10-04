@@ -36,7 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Analyzes evidence files in binary read-only mode and writes JSON reports to reports/.\n"
             "For automated multi-stage incident triage, use: python3 -m forensix triage --help\n"
-            "For timeline reconstruction and querying, use: python3 -m forensix timeline --help"
+            "For timeline reconstruction and querying, use: python3 -m forensix timeline --help\n"
+            "For integrated correlation & detection investigation, use: python3 -m forensix investigate --help"
         ),
     )
 
@@ -126,6 +127,31 @@ def build_triage_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--v4",
+        action="store_true",
+        default=False,
+        help="Execute the V4 integrated investigation pipeline (evidence -> timeline -> correlation -> detection -> reporting).",
+    )
+
+    parser.add_argument(
+        "--matched-only",
+        action="store_true",
+        default=False,
+        help="Filter detection report to only include matched detection rules.",
+    )
+
+    parser.add_argument(
+        "--log-year",
+        type=int,
+        default=None,
+        dest="log_year",
+        help=(
+            "Explicit four-digit calendar year context (e.g. 2026) for yearless "
+            "BSD/RFC3164 syslog timestamps. ForensiX never infers or guesses the year automatically."
+        ),
+    )
+
+    parser.add_argument(
         "-v",
         "--version",
         action="version",
@@ -154,6 +180,11 @@ def execute_triage_cli(argv: Optional[Sequence[str]] = None) -> tuple[int, Optio
     """
     parser = build_triage_parser()
     args = parser.parse_args(argv)
+
+    if getattr(args, "v4", False) or getattr(args, "matched_only", False):
+        from forensix.triage_cli import execute_investigation_cli
+        v4_code, v4_report = execute_investigation_cli(argv)
+        return v4_code, None
 
     evidence_path = Path(args.evidence_directory)
 
@@ -199,6 +230,7 @@ def execute_triage_cli(argv: Optional[Sequence[str]] = None) -> tuple[int, Optio
             enabled_stages=enabled_stages,
             report_formats=report_formats,
             skip_reports=args.skip_reports,
+            log_timestamp_year=getattr(args, "log_year", None),
         )
         orchestrator = TriageOrchestrator(config)
         result = orchestrator.run()
@@ -293,7 +325,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         int: 0 on success, non-zero on failure.
     """
     raw_args = list(sys.argv[1:] if argv is None else argv)
+    if raw_args and raw_args[0] in ("investigate", "triage-v4"):
+        from forensix.triage_cli import investigation_main
+        return investigation_main(raw_args[1:])
     if raw_args and raw_args[0] == "triage":
+        if any(flag in raw_args for flag in ("--v4", "--investigate", "--matched-only")):
+            from forensix.triage_cli import triage_main as triage_v4_main
+            filtered_args = [a for a in raw_args[1:] if a != "--v4"]
+            return triage_v4_main(filtered_args)
         return triage_main(raw_args[1:])
     if raw_args and raw_args[0] == "timeline":
         return timeline_main(raw_args[1:])

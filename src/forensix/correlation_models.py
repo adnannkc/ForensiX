@@ -48,6 +48,7 @@ class CorrelationType(str, Enum):
     SAME_PATH = "SAME_PATH"
     SAME_SESSION = "SAME_SESSION"
     AUTHENTICATION_PRIVILEGE = "AUTHENTICATION_PRIVILEGE"
+    HOST_NETWORK = "HOST_NETWORK"
 
 
 # Convenience alias for relationship type
@@ -414,7 +415,7 @@ class Correlation:
                 )
 
         # Auto-infer timestamps from TimelineEvent objects if not explicitly supplied
-        if validated_start_ts is None and validated_end_ts is None and extracted_timestamps:
+        if validated_start_ts is None and validated_end_ts is None and len(extracted_timestamps) >= 2:
             # Check awareness consistency across extracted timestamps
             aware_count = sum(
                 1 for ts in extracted_timestamps if ts.tzinfo is not None and ts.tzinfo.utcoffset(ts) is not None

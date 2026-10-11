@@ -64,6 +64,8 @@ class ConditionOperator(str, Enum):
     - LESS_THAN (<): Numeric strictly less than comparison.
     - LESS_EQUAL (<=): Numeric less than or equal comparison.
     - EXISTS: Attribute presence and non-null check.
+    - STARTS_WITH: String prefix match.
+    - ENDS_WITH: String suffix match.
     """
 
     EQUALS = "EQUALS"
@@ -75,6 +77,8 @@ class ConditionOperator(str, Enum):
     LESS_THAN = "LESS_THAN"
     LESS_EQUAL = "LESS_EQUAL"
     EXISTS = "EXISTS"
+    STARTS_WITH = "STARTS_WITH"
+    ENDS_WITH = "ENDS_WITH"
 
 
 # Mapping of common symbolic and text aliases to canonical ConditionOperator
@@ -102,6 +106,10 @@ _OPERATOR_ALIASES: Dict[str, ConditionOperator] = {
     "less_equal": ConditionOperator.LESS_EQUAL,
     "exists": ConditionOperator.EXISTS,
     "is_not_null": ConditionOperator.EXISTS,
+    "starts_with": ConditionOperator.STARTS_WITH,
+    "startswith": ConditionOperator.STARTS_WITH,
+    "ends_with": ConditionOperator.ENDS_WITH,
+    "endswith": ConditionOperator.ENDS_WITH,
 }
 
 

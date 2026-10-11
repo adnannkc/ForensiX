@@ -249,7 +249,7 @@ class TestTimelineCLI(unittest.TestCase):
             sys.stderr = stderr_capture
             ret, report = execute_timeline_cli([
                 str(self.evidence_dir),
-                "--category", "NETWORK",
+                "--category", "FIREWALL",
             ])
         finally:
             sys.stderr = orig_stderr
@@ -257,7 +257,7 @@ class TestTimelineCLI(unittest.TestCase):
         self.assertEqual(ret, 1)
         self.assertIsNone(report)
         err_msg = stderr_capture.getvalue()
-        self.assertIn("Invalid category: 'NETWORK'", err_msg)
+        self.assertIn("Invalid category: 'FIREWALL'", err_msg)
         self.assertIn("AUTHENTICATION", err_msg)
         self.assertIn("FILESYSTEM", err_msg)
 

@@ -37,7 +37,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Analyzes evidence files in binary read-only mode and writes JSON reports to reports/.\n"
             "For automated multi-stage incident triage, use: python3 -m forensix triage --help\n"
             "For timeline reconstruction and querying, use: python3 -m forensix timeline --help\n"
-            "For integrated correlation & detection investigation, use: python3 -m forensix investigate --help"
+            "For integrated correlation & detection investigation, use: python3 -m forensix investigate --help\n"
+            "For network PCAP forensics and triage, use: python3 -m forensix pcap --help"
         ),
     )
 
@@ -325,6 +326,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         int: 0 on success, non-zero on failure.
     """
     raw_args = list(sys.argv[1:] if argv is None else argv)
+    if raw_args and raw_args[0] in ("pcap", "network"):
+        from forensix.triage_cli import pcap_main
+        return pcap_main(raw_args[1:])
     if raw_args and raw_args[0] in ("investigate", "triage-v4"):
         from forensix.triage_cli import investigation_main
         return investigation_main(raw_args[1:])

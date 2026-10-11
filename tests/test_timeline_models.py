@@ -286,8 +286,8 @@ class TestTimelineEventModel(unittest.TestCase):
                 self.assertEqual(event.category, expected_enum)
 
     def test_16_category_validation_rejects_speculative_categories(self):
-        """16. Verify speculative categories (PCAP, NETWORK, MEMORY, BROWSER, PROCESS) are rejected."""
-        speculative = ["PCAP", "NETWORK", "MEMORY", "BROWSER", "PROCESS", "DNS", "CLOUD"]
+        """16. Verify speculative categories (PCAP, FIREWALL, MEMORY, BROWSER, PROCESS) are rejected."""
+        speculative = ["PCAP", "FIREWALL", "MEMORY", "BROWSER", "PROCESS", "DNS", "CLOUD"]
         for spec in speculative:
             with self.subTest(spec=spec):
                 with self.assertRaises(ValueError):

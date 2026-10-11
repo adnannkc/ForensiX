@@ -61,6 +61,7 @@ ALL_RELATIONSHIP_TYPES: Tuple[CorrelationType, ...] = (
     CorrelationType.SAME_PATH,
     CorrelationType.SAME_SESSION,
     CorrelationType.AUTHENTICATION_PRIVILEGE,
+    CorrelationType.HOST_NETWORK,
 )
 
 # Known event types and substrings indicating privilege activity
@@ -599,6 +600,28 @@ class CorrelationEngine:
                 and len(discovered) >= self.config.max_correlations
             ):
                 break
+
+        # 7. HOST_NETWORK relationship (V5.6)
+        if CorrelationType.HOST_NETWORK in active_types:
+            if self.config.max_correlations is None or len(discovered) < self.config.max_correlations:
+                from forensix.network_correlation import correlate_host_network_events
+
+                remaining = (
+                    self.config.max_correlations - len(discovered)
+                    if self.config.max_correlations is not None
+                    else None
+                )
+                host_net_corrs = correlate_host_network_events(
+                    events,
+                    time_window_seconds=window,
+                    max_correlations=remaining,
+                )
+                for corr in host_net_corrs:
+                    pair_key = tuple(sorted(corr.event_ids))
+                    dedup_key = (CorrelationType.HOST_NETWORK.value, pair_key)
+                    if dedup_key not in seen_pairs:
+                        discovered.append(corr)
+                        seen_pairs.add(dedup_key)
 
         # Sort discovered correlations in stable, deterministic order
         discovered.sort(key=correlation_sort_key)

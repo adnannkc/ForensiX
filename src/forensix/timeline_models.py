@@ -22,6 +22,7 @@ class TimelineCategory(str, Enum):
     AUTHENTICATION = "authentication"
     ACCOUNT = "account"
     PERSISTENCE = "persistence"
+    NETWORK = "network"
 
 
 def generate_timeline_id() -> str:

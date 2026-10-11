@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from forensix.audit import AuditEvent, AuditEventType, create_audit_event
 from forensix.investigation import InvestigationResultSet, artifact_sort_key
+from forensix import __version__
 from forensix.report_models import (
     ForensicReport,
     ReportFormat,
@@ -33,7 +34,7 @@ def build_forensic_report(
     case_name: Optional[str] = None,
     investigator: Optional[str] = None,
     evidence_root: Optional[str] = None,
-    forensix_version: str = "4.0.0",
+    forensix_version: str = __version__,
     created_at: Optional[str] = None,
     audit_trail: Optional[Sequence[AuditEvent]] = None,
     record_generation_audit: bool = True,

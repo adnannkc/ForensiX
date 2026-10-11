@@ -1066,7 +1066,14 @@ def can_adapt_artifact(artifact: Any) -> bool:
     """Return True if any registered adapter can handle the given artifact."""
     if artifact is None:
         return False
-    return any(adapter.can_adapt(artifact) for adapter in _ALL_ADAPTERS)
+    if any(adapter.can_adapt(artifact) for adapter in _ALL_ADAPTERS):
+        return True
+    try:
+        from forensix.network_timeline import NetworkTimelineAdapter
+
+        return NetworkTimelineAdapter().can_adapt(artifact)
+    except ImportError:
+        return False
 
 
 def adapt_artifact(artifact: Any) -> Tuple[TimelineEvent, ...]:
@@ -1077,6 +1084,7 @@ def adapt_artifact(artifact: Any) -> Tuple[TimelineEvent, ...]:
     1. FilesystemAdapter (ArtifactRecord, ForensicAnalysisResult, FileMetadata, filesystem HostArtifact)
     2. LogAdapter (LogEvent, log HostArtifact)
     3. AuthenticationAdapter (AuthenticationRecord, authentication HostArtifact)
+    4. NetworkTimelineAdapter (NetworkEvent, NetworkApplicationMetadata, NetworkEvidenceRecord)
 
     Args:
         artifact: Forensic artifact record, result, or host artifact.
@@ -1095,6 +1103,15 @@ def adapt_artifact(artifact: Any) -> Tuple[TimelineEvent, ...]:
     for adapter in _ALL_ADAPTERS:
         if adapter.can_adapt(artifact):
             return adapter.adapt(artifact)
+
+    try:
+        from forensix.network_timeline import NetworkTimelineAdapter
+
+        net_adapter = NetworkTimelineAdapter()
+        if net_adapter.can_adapt(artifact):
+            return net_adapter.adapt(artifact)
+    except ImportError:
+        pass
 
     # Explicit check for known V2 models that lack chronological timestamps
     non_timeline_types = (

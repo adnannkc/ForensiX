@@ -36,6 +36,17 @@ from forensix.detection_reporting import (
     write_correlation_detection_json_report,
 )
 from forensix.initial_rules import get_initial_rules
+from forensix.network_pcap_parser import (
+    PcapCorruptError,
+    PcapError,
+    PcapParser,
+    PcapTruncatedError,
+    PcapUnsupportedError,
+)
+from forensix.network_rules import create_canonical_network_rules
+from forensix.network_timeline import extract_network_timeline_events
+from forensix.rule_models import DetectionRule, RuleCollection
+from forensix.timeline_models import TimelineEvent
 from forensix.timeline_reconstruction import reconstruct_timeline
 from forensix.triage_models import TriageConfig
 from forensix.triage_orchestrator import TriageOrchestrator
@@ -44,6 +55,42 @@ from forensix.triage_orchestrator import TriageOrchestrator
 SUPPORTED_FORMATS: Tuple[str, ...] = ("html", "json")
 DEFAULT_FORMAT: str = "html"
 DEFAULT_REPORTS_DIR = Path("reports")
+
+
+def is_pcap_path(path: Union[str, Path]) -> bool:
+    """
+    Check if a path points to an existing regular file that represents a PCAP capture.
+
+    Checks file extension (.pcap, .cap, .pcapng) or PCAP global header magic bytes.
+    """
+    try:
+        p = Path(path)
+        if not p.is_file():
+            return False
+        if p.suffix.lower() in (".pcap", ".cap", ".pcapng"):
+            return True
+        with open(p, "rb") as f:
+            magic = f.read(4)
+        return magic in (
+            b"\xa1\xb2\xc3\xd4",
+            b"\xd4\xc3\xb2\xa1",
+            b"\xa1\xb2\x3c\x4d",
+            b"\x4d\x3c\xb2\xa1",
+            b"\x0a\x0d\x0d\x0a",
+        )
+    except Exception:
+        return False
+
+
+def find_pcap_files_in_directory(directory: Path) -> List[Path]:
+    """Find all PCAP files inside an evidence directory in stable order."""
+    try:
+        return sorted(
+            p for p in directory.rglob("*")
+            if p.is_file() and is_pcap_path(p)
+        )
+    except Exception:
+        return []
 
 
 def build_investigation_parser(
@@ -89,6 +136,13 @@ def build_investigation_parser(
         "--investigator",
         default=None,
         help="Name or identification of the handling forensic investigator.",
+    )
+
+    # PCAP network capture option
+    parser.add_argument(
+        "--pcap",
+        default=None,
+        help="Path to an optional PCAP network capture file to integrate with triage.",
     )
 
     # Output options
@@ -208,7 +262,39 @@ def execute_investigation_cli(
         )
         return 1, None
 
-    if not evidence_path.is_dir():
+    pcap_files: List[Path] = []
+    is_pcap_only = False
+
+    if evidence_path.is_file():
+        if is_pcap_path(evidence_path):
+            is_pcap_only = True
+            pcap_files = [evidence_path]
+        else:
+            print(
+                f"Error: Evidence path is not a directory: '{args.evidence_directory}'",
+                file=sys.stderr,
+            )
+            return 1, None
+    elif evidence_path.is_dir():
+        pcap_arg = getattr(args, "pcap", None)
+        if pcap_arg is not None:
+            pcap_p = Path(pcap_arg)
+            if not pcap_p.exists():
+                print(
+                    f"Error: PCAP evidence file does not exist: '{pcap_arg}'",
+                    file=sys.stderr,
+                )
+                return 1, None
+            if not pcap_p.is_file():
+                print(
+                    f"Error: PCAP path is not a regular file: '{pcap_arg}'",
+                    file=sys.stderr,
+                )
+                return 1, None
+            pcap_files = [pcap_p]
+        else:
+            pcap_files = find_pcap_files_in_directory(evidence_path)
+    else:
         print(
             f"Error: Evidence path is not a directory: '{args.evidence_directory}'",
             file=sys.stderr,
@@ -292,47 +378,109 @@ def execute_investigation_cli(
         )
         return 1, None
 
-    # 4. Stage 1: Evidence / Host Analysis via existing V1/V2 TriageOrchestrator
-    if args.verbose:
-        print("[1/6] Evidence Analysis...")
+    # 4. Stage 1: Evidence / Host Analysis
+    raw_host_events: Tuple[Any, ...] = ()
+    artifact_count = 0
 
-    try:
-        triage_config = TriageConfig(
-            evidence_path=str(resolved_evidence),
-            case_id=args.case_id.strip() if args.case_id else None,
-            case_name=args.case_name.strip() if args.case_name else None,
-            investigator=args.investigator.strip() if args.investigator else None,
-            skip_reports=True,  # Suppress intermediate V2 file reports
-            collect_audit=False,
-            log_timestamp_year=log_year,
-        )
-        orchestrator = TriageOrchestrator(triage_config)
-        triage_result = orchestrator.run()
-    except (ValueError, TypeError) as err:
-        print(f"Error: Evidence analysis configuration error: {err}", file=sys.stderr)
-        return 1, None
-    except Exception as err:
-        print(f"Error: Evidence analysis failed: {err}", file=sys.stderr)
-        return 1, None
+    if not is_pcap_only:
+        if args.verbose:
+            print("[1/6] Evidence Analysis...")
 
-    artifact_count = triage_result.summary.total_artifacts if triage_result.summary else 0
-    if args.verbose:
-        print(f"      Completed: {artifact_count} artifacts identified")
+        try:
+            triage_config = TriageConfig(
+                evidence_path=str(resolved_evidence),
+                case_id=args.case_id.strip() if args.case_id else None,
+                case_name=args.case_name.strip() if args.case_name else None,
+                investigator=args.investigator.strip() if args.investigator else None,
+                skip_reports=True,  # Suppress intermediate V2 file reports
+                collect_audit=False,
+                log_timestamp_year=log_year,
+            )
+            orchestrator = TriageOrchestrator(triage_config)
+            triage_result = orchestrator.run()
+        except (ValueError, TypeError) as err:
+            print(f"Error: Evidence analysis configuration error: {err}", file=sys.stderr)
+            return 1, None
+        except Exception as err:
+            print(f"Error: Evidence analysis failed: {err}", file=sys.stderr)
+            return 1, None
 
-    # 5. Stage 2: Timeline Reconstruction via existing V3.3 adapters + V3.4 reconstruct_timeline
-    if args.verbose:
-        print("[2/6] Timeline Reconstruction...")
+        artifact_count = triage_result.summary.total_artifacts if triage_result.summary else 0
+        if args.verbose:
+            print(f"      Completed: {artifact_count} artifacts identified")
 
-    try:
         if triage_result.artifacts and triage_result.artifacts.artifacts:
-            raw_events = adapt_artifacts(
+            raw_host_events = adapt_artifacts(
                 triage_result.artifacts.artifacts,
                 ignore_unsupported=True,
                 log_timestamp_year=log_year,
             )
-        else:
-            raw_events = ()
-        reconstructed = reconstruct_timeline(raw_events)
+    else:
+        if args.verbose:
+            print("[1/6] Evidence Analysis (PCAP capture)...")
+
+    # Validate PCAP capture files eagerly
+    if pcap_files:
+        try:
+            for pf in pcap_files:
+                with PcapParser(pf) as parser:
+                    _ = parser.global_header
+        except PcapUnsupportedError as err:
+            print(f"Error: Unsupported PCAP format: {err}", file=sys.stderr)
+            return 1, None
+        except PcapCorruptError as err:
+            print(f"Error: Corrupt PCAP evidence: {err}", file=sys.stderr)
+            return 1, None
+        except PcapTruncatedError as err:
+            print(f"Error: Truncated PCAP capture: {err}", file=sys.stderr)
+            return 1, None
+        except PcapError as err:
+            print(f"Error: PCAP parsing failure: {err}", file=sys.stderr)
+            return 1, None
+        except PermissionError as err:
+            print(f"Error: Permission denied accessing PCAP evidence: {err}", file=sys.stderr)
+            return 1, None
+        except OSError as err:
+            print(f"Error: I/O failure accessing PCAP evidence: {err}", file=sys.stderr)
+            return 1, None
+
+    # 5. Stage 2: Network Event Streaming & Timeline Reconstruction
+    if args.verbose:
+        print("[2/6] Timeline Reconstruction...")
+
+    net_events: List[TimelineEvent] = []
+    if pcap_files:
+        try:
+            for pf in pcap_files:
+                for ev in extract_network_timeline_events(
+                    pf,
+                    pcap_name=pf.name,
+                    include_packet_events=True,
+                    include_metadata_events=True,
+                ):
+                    net_events.append(ev)
+        except PcapUnsupportedError as err:
+            print(f"Error: Unsupported PCAP format: {err}", file=sys.stderr)
+            return 1, None
+        except PcapCorruptError as err:
+            print(f"Error: Corrupt PCAP evidence: {err}", file=sys.stderr)
+            return 1, None
+        except PcapTruncatedError as err:
+            print(f"Error: Truncated PCAP capture: {err}", file=sys.stderr)
+            return 1, None
+        except PcapError as err:
+            print(f"Error: PCAP streaming failure: {err}", file=sys.stderr)
+            return 1, None
+        except PermissionError as err:
+            print(f"Error: Permission denied streaming PCAP evidence: {err}", file=sys.stderr)
+            return 1, None
+        except OSError as err:
+            print(f"Error: I/O failure streaming PCAP evidence: {err}", file=sys.stderr)
+            return 1, None
+
+    all_events = list(raw_host_events) + net_events
+    try:
+        reconstructed = reconstruct_timeline(all_events, deduplicate=True)
     except Exception as err:
         print(f"Error: Timeline reconstruction failed: {err}", file=sys.stderr)
         return 1, None
@@ -354,14 +502,22 @@ def execute_investigation_cli(
     if args.verbose:
         print(f"      Completed: {len(correlations)} correlations identified")
 
-    # 7. Stage 4: Load Initial Detection Rules via existing V4.5 get_initial_rules()
+    # 7. Stage 4: Load Detection Rules
     if args.verbose:
-        print("[4/6] Loading Initial Detection Rules...")
+        print("[4/6] Loading Detection Rules...")
 
     try:
-        rules = get_initial_rules()
+        rules_list: List[DetectionRule] = []
+        if raw_host_events:
+            rules_list.extend(get_initial_rules().rules)
+        if pcap_files:
+            rules_list.extend(create_canonical_network_rules().rules)
+        if not rules_list:
+            rules_list.extend(get_initial_rules().rules)
+
+        rules = RuleCollection(rules_list)
     except Exception as err:
-        print(f"Error: Failed to load initial detection rules: {err}", file=sys.stderr)
+        print(f"Error: Failed to load detection rules: {err}", file=sys.stderr)
         return 1, None
 
     if args.verbose:
@@ -482,3 +638,159 @@ triage_main = investigation_main
 build_v4_triage_parser = build_investigation_parser
 execute_triage_v4_cli = execute_investigation_cli
 triage_v4_main = investigation_main
+
+
+# ==============================================================================
+# Dedicated PCAP Network Forensics CLI Entry Points (V5.8)
+# ==============================================================================
+
+def build_pcap_parser(
+    prog: str = "python3 -m forensix pcap",
+) -> argparse.ArgumentParser:
+    """
+    Build and configure the command-line argument parser for standalone PCAP capture triage.
+    """
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description="ForensiX - Automated Digital Forensics & Incident Triage Platform (V5 Network PCAP Triage)",
+        epilog=(
+            "Executes the full ForensiX network investigation pipeline:\n"
+            "PCAP parsing -> packet & metadata extraction -> timeline reconstruction ->\n"
+            "event correlation -> rule-based detection -> integrated reporting (JSON/HTML)."
+        ),
+    )
+
+    parser.add_argument(
+        "pcap_file",
+        help="Path to the PCAP network capture file to analyze.",
+    )
+
+    parser.add_argument(
+        "--host-evidence",
+        default=None,
+        dest="host_evidence",
+        help="Path to an optional host evidence directory to correlate with this PCAP capture.",
+    )
+
+    parser.add_argument(
+        "--case-id",
+        default=None,
+        help="Incident case tracking identifier (e.g. CASE-2026-001).",
+    )
+    parser.add_argument(
+        "--case-name",
+        default=None,
+        help="Human-readable title or description for the investigation.",
+    )
+    parser.add_argument(
+        "--investigator",
+        default=None,
+        help="Name or identification of the handling forensic investigator.",
+    )
+
+    parser.add_argument(
+        "-o",
+        "--output",
+        "--output-dir",
+        dest="output",
+        default=None,
+        help="Destination file path or directory for generated investigation report.",
+    )
+    parser.add_argument(
+        "--format",
+        default=None,
+        help=f"Report presentation format ('html' or 'json', default: '{DEFAULT_FORMAT}').",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Generate report in JSON format (shortcut for --format json).",
+    )
+    parser.add_argument(
+        "--html",
+        action="store_true",
+        default=False,
+        help="Generate report in HTML format (shortcut for --format html).",
+    )
+
+    parser.add_argument(
+        "--matched-only",
+        action="store_true",
+        default=False,
+        help="Filter report to include only matched detection rules.",
+    )
+
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Display detailed stage-by-stage progress information.",
+    )
+
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"ForensiX {__version__}",
+    )
+
+    return parser
+
+
+def execute_pcap_cli(
+    argv: Optional[Sequence[str]] = None,
+    parser: Optional[argparse.ArgumentParser] = None,
+) -> Tuple[int, Optional[CorrelationDetectionReport]]:
+    """
+    Execute standalone PCAP network capture triage from CLI arguments.
+
+    Returns:
+        Tuple[int, Optional[CorrelationDetectionReport]]: (exit_code, report_instance)
+    """
+    if parser is None:
+        parser = build_pcap_parser()
+
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return exc.code if isinstance(exc.code, int) else 2, None
+
+    inv_argv: List[str] = []
+    if args.host_evidence:
+        inv_argv.append(args.host_evidence)
+        inv_argv.extend(["--pcap", args.pcap_file])
+    else:
+        inv_argv.append(args.pcap_file)
+
+    if args.case_id:
+        inv_argv.extend(["--case-id", args.case_id])
+    if args.case_name:
+        inv_argv.extend(["--case-name", args.case_name])
+    if args.investigator:
+        inv_argv.extend(["--investigator", args.investigator])
+    if args.output:
+        inv_argv.extend(["-o", args.output])
+    if args.json:
+        inv_argv.append("--json")
+    elif args.html:
+        inv_argv.append("--html")
+    elif args.format:
+        inv_argv.extend(["--format", args.format])
+    if args.matched_only:
+        inv_argv.append("--matched-only")
+    if args.verbose:
+        inv_argv.append("--verbose")
+
+    return execute_investigation_cli(inv_argv)
+
+
+def pcap_main(argv: Optional[Sequence[str]] = None) -> int:
+    """
+    Main CLI entry point for ForensiX PCAP Network Forensics Triage (V5.8).
+
+    Returns:
+        int: 0 on success, non-zero on error.
+    """
+    exit_code, _ = execute_pcap_cli(argv)
+    return exit_code

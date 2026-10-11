@@ -637,6 +637,20 @@ def evaluate_condition_operator(
             return actual in expected
         return False
 
+    if operator == ConditionOperator.STARTS_WITH:
+        if actual is None or expected is None:
+            return False
+        if isinstance(actual, str) and isinstance(expected, str):
+            return actual.startswith(expected)
+        return False
+
+    if operator == ConditionOperator.ENDS_WITH:
+        if actual is None or expected is None:
+            return False
+        if isinstance(actual, str) and isinstance(expected, str):
+            return actual.endswith(expected)
+        return False
+
     # Numeric / Ordered comparisons
     if operator in (
         ConditionOperator.GREATER_THAN,

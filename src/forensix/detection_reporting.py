@@ -615,6 +615,8 @@ class CorrelationDetectionReport:
     detections: Tuple[DetectionResult, ...]
     correlations: Tuple[Correlation, ...]
     timeline_events: Tuple[TimelineEvent, ...]
+    errors: Tuple[str, ...] = ()
+    limitations: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.detections, tuple):
@@ -623,13 +625,17 @@ class CorrelationDetectionReport:
             object.__setattr__(self, "correlations", tuple(self.correlations))
         if not isinstance(self.timeline_events, tuple):
             object.__setattr__(self, "timeline_events", tuple(self.timeline_events))
+        if not isinstance(self.errors, tuple):
+            object.__setattr__(self, "errors", tuple(self.errors))
+        if not isinstance(self.limitations, tuple):
+            object.__setattr__(self, "limitations", tuple(self.limitations))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert investigation report to a deterministic, JSON-serializable dictionary."""
         event_map = {e.event_id: e for e in self.timeline_events}
         corr_map = {c.correlation_id: c for c in self.correlations}
 
-        return {
+        res: Dict[str, Any] = {
             "report_type": self.report_type,
             "report_version": self.report_version,
             "forensix_version": self.forensix_version,
@@ -654,6 +660,11 @@ class CorrelationDetectionReport:
             "correlations": [serialize_correlation(c) for c in self.correlations],
             "timeline_events": [serialize_timeline_event(e) for e in self.timeline_events],
         }
+        if self.limitations:
+            res["limitations"] = list(self.limitations)
+        if self.errors:
+            res["errors"] = list(self.errors)
+        return res
 
 
 # Convenience alias
@@ -670,6 +681,8 @@ def generate_correlation_detection_report(
     investigator: Optional[str] = None,
     generated_at: Optional[Union[str, datetime]] = None,
     matched_only: bool = False,
+    errors: Optional[Sequence[str]] = None,
+    limitations: Optional[Sequence[str]] = None,
 ) -> CorrelationDetectionReport:
     """
     Generate an integrated CorrelationDetectionReport connecting detections, correlations, and events.
@@ -686,6 +699,8 @@ def generate_correlation_detection_report(
             and not matched_only
             and correlations is None
             and timeline is None
+            and errors is None
+            and limitations is None
         ):
             return detections
         filtered_dets = [d for d in detections.detections if (not matched_only or d.matched)]
@@ -708,6 +723,8 @@ def generate_correlation_detection_report(
             investigator=investigator if investigator is not None else detections.investigator,
             generated_at=generated_at if generated_at is not None else detections.generated_at,
             matched_only=False,
+            errors=errors if errors is not None else detections.errors,
+            limitations=limitations if limitations is not None else detections.limitations,
         )
 
     # Validate detections
@@ -801,6 +818,8 @@ def generate_correlation_detection_report(
         detections=tuple(sorted_dets),
         correlations=tuple(sorted_corrs),
         timeline_events=tuple(sorted_events),
+        errors=tuple(errors) if errors else (),
+        limitations=tuple(limitations) if limitations else (),
     )
 
 
@@ -819,6 +838,8 @@ def render_correlation_detection_json(
     investigator: Optional[str] = None,
     generated_at: Optional[Union[str, datetime]] = None,
     matched_only: bool = False,
+    errors: Optional[Sequence[str]] = None,
+    limitations: Optional[Sequence[str]] = None,
 ) -> str:
     """Render an integrated correlation and detection report as a formatted JSON string."""
     report = generate_correlation_detection_report(
@@ -830,6 +851,8 @@ def render_correlation_detection_json(
         investigator=investigator,
         generated_at=generated_at,
         matched_only=matched_only,
+        errors=errors,
+        limitations=limitations,
     )
     return json.dumps(report.to_dict(), indent=indent, ensure_ascii=False)
 
@@ -846,6 +869,8 @@ def write_correlation_detection_json_report(
     investigator: Optional[str] = None,
     generated_at: Optional[Union[str, datetime]] = None,
     matched_only: bool = False,
+    errors: Optional[Sequence[str]] = None,
+    limitations: Optional[Sequence[str]] = None,
 ) -> Path:
     """Write an integrated correlation and detection JSON report to the destination path."""
     path = Path(output_path)
@@ -860,6 +885,8 @@ def write_correlation_detection_json_report(
         investigator=investigator,
         generated_at=generated_at,
         matched_only=matched_only,
+        errors=errors,
+        limitations=limitations,
     )
     path.write_text(content, encoding="utf-8")
     return path
@@ -875,6 +902,8 @@ def render_correlation_detection_html(
     investigator: Optional[str] = None,
     generated_at: Optional[Union[str, datetime]] = None,
     matched_only: bool = False,
+    errors: Optional[Sequence[str]] = None,
+    limitations: Optional[Sequence[str]] = None,
 ) -> str:
     """Render an integrated correlation and detection report as a standalone HTML5 forensic report."""
     report = generate_correlation_detection_report(
@@ -886,6 +915,8 @@ def render_correlation_detection_html(
         investigator=investigator,
         generated_at=generated_at,
         matched_only=matched_only,
+        errors=errors,
+        limitations=limitations,
     )
 
     event_map = {e.event_id: e for e in report.timeline_events}
@@ -902,6 +933,16 @@ def render_correlation_detection_html(
         meta_items.append(f"<div><span class='label'>Report Generated:</span> <time>{esc(report.generated_at)}</time></div>")
 
     meta_html = f"<div class='metadata-bar'>{''.join(meta_items)}</div>" if meta_items else ""
+
+    # Processing limitations and errors/diagnostics
+    diag_items: List[str] = []
+    if report.limitations:
+        for lim in report.limitations:
+            diag_items.append(f"<li class='limitation-item'><strong>Limitation:</strong> {esc(lim)}</li>")
+    if report.errors:
+        for err in report.errors:
+            diag_items.append(f"<li class='error-item'><strong>Diagnostic/Error:</strong> {esc(err)}</li>")
+    diag_html = f"<div class='diagnostics-card'><h3>Processing Limitations &amp; Diagnostics</h3><ul>{''.join(diag_items)}</ul></div>" if diag_items else ""
 
     # Detections HTML blocks
     det_blocks: List[str] = []
@@ -934,7 +975,8 @@ def render_correlation_detection_html(
                 if ev.source_path:
                     prov_parts.append(f"Path: {esc(ev.source_path)}")
                 if ev.source_line is not None:
-                    prov_parts.append(f"Line: {ev.source_line}")
+                    line_lbl = "Frame" if cat_val == "network" else "Line"
+                    prov_parts.append(f"{line_lbl}: {ev.source_line}")
                 if ev.source_event_id:
                     prov_parts.append(f"Event ID: {esc(ev.source_event_id)}")
                 if ev.source_artifact_id:
@@ -984,7 +1026,14 @@ def render_correlation_detection_html(
 
     ev_list_items: List[str] = []
     for e in report.timeline_events:
-        ev_list_items.append(f"<li><code>{esc(e.event_id)}</code> &mdash; {esc(e.event_type)} &mdash; {esc(e.description)}</li>")
+        src_info = ""
+        if e.source_line is not None:
+            cat_val = e.category.value if hasattr(e.category, "value") else str(e.category)
+            if cat_val == "network":
+                src_info = f" (Frame: {e.source_line})"
+            else:
+                src_info = f" (Line: {e.source_line})"
+        ev_list_items.append(f"<li><code>{esc(e.event_id)}</code> &mdash; {esc(e.event_type)}{src_info} &mdash; {esc(e.description)}</li>")
     events_html = f"<ul>{''.join(ev_list_items)}</ul>" if ev_list_items else "<p><em>No timeline events recorded.</em></p>"
 
     return f"""<!DOCTYPE html>
@@ -1102,6 +1151,24 @@ def render_correlation_detection_html(
     font-size: 11px;
   }}
   code {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }}
+  .diagnostics-card {{
+    background: #1e293b;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }}
+  .diagnostics-card h3 {{
+    margin: 0 0 10px 0;
+    color: #f59e0b;
+    font-size: 15px;
+  }}
+  .diagnostics-card ul {{
+    margin: 0;
+    padding-left: 20px;
+  }}
+  .limitation-item {{ color: #fde68a; margin-bottom: 4px; }}
+  .error-item {{ color: #fca5a5; margin-bottom: 4px; }}
 </style>
 </head>
 <body>
@@ -1111,6 +1178,7 @@ def render_correlation_detection_html(
 </div>
 
 {meta_html}
+{diag_html}
 
 <div class="summary-section">
   <h2>Investigation Summary</h2>
@@ -1150,6 +1218,8 @@ def write_correlation_detection_html_report(
     investigator: Optional[str] = None,
     generated_at: Optional[Union[str, datetime]] = None,
     matched_only: bool = False,
+    errors: Optional[Sequence[str]] = None,
+    limitations: Optional[Sequence[str]] = None,
 ) -> Path:
     """Write an integrated correlation and detection HTML report to the destination path."""
     path = Path(output_path)
@@ -1163,6 +1233,8 @@ def write_correlation_detection_html_report(
         investigator=investigator,
         generated_at=generated_at,
         matched_only=matched_only,
+        errors=errors,
+        limitations=limitations,
     )
     path.write_text(content, encoding="utf-8")
     return path

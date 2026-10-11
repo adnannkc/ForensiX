@@ -4,7 +4,7 @@ V1 - Evidence Foundation
 V2 - Host & System Artifacts
 """
 
-__version__ = "4.0.0"
+__version__ = "5.0.0"
 
 # V1 Core Exports
 from forensix.hasher import compute_hashes
@@ -348,6 +348,117 @@ from forensix.triage_cli import (
     build_v4_triage_parser,
     execute_triage_v4_cli,
     triage_v4_main,
+    build_pcap_parser,
+    execute_pcap_cli,
+    pcap_main,
+)
+
+# V5.1 Network Evidence Model Exports
+from forensix.network_models import (
+    FORENSIX_V5_NETWORK_NAMESPACE,
+    NetworkEvidenceRecord,
+    compute_deterministic_network_id,
+    create_network_evidence_record,
+)
+
+# V5.2 PCAP Parser Exports
+from forensix.network_pcap_parser import (
+    PCAP_MAGIC_MICROSECONDS_BIG,
+    PCAP_MAGIC_MICROSECONDS_LITTLE,
+    PCAP_MAGIC_NANOSECONDS_BIG,
+    PCAP_MAGIC_NANOSECONDS_LITTLE,
+    PCAPNG_SECTION_HEADER_MAGIC,
+    PcapError,
+    PcapCorruptError,
+    PcapTruncatedError,
+    PcapUnsupportedError,
+    PcapGlobalHeader,
+    PcapParser,
+    extract_transport_payload,
+    parse_pcap,
+    read_pcap,
+    read_pcap_raw,
+)
+
+# V5.3 Network Event Extraction Exports
+from forensix.network_events import (
+    FORENSIX_V5_NETWORK_EVENT_NAMESPACE,
+    NetworkEvent,
+    NetworkEventExtractor,
+    NetworkEventType,
+    compute_deterministic_network_event_id,
+    extract_network_event,
+    extract_network_events,
+)
+
+# V5.4 Network Metadata Extraction Exports
+from forensix.network_metadata import (
+    FORENSIX_V5_NETWORK_METADATA_NAMESPACE,
+    DnsAnswer,
+    DnsMetadata,
+    DnsQuestion,
+    HttpMetadata,
+    NetworkApplicationMetadata,
+    NetworkMetadataExtractor,
+    TlsMetadata,
+    compute_deterministic_dns_id,
+    compute_deterministic_http_id,
+    compute_deterministic_tls_id,
+    extract_application_metadata,
+    extract_metadata_from_packet,
+    extract_metadata_from_pcap,
+    parse_dns_payload,
+    parse_http_payload,
+    parse_tls_payload,
+)
+
+# V5.5 Network-to-Timeline Integration Exports
+from forensix.network_timeline import (
+    NetworkTimelineAdapter,
+    NetworkTimelineExtractor,
+    adapt_network_artifact,
+    adapt_network_event,
+    adapt_network_metadata,
+    adapt_network_record,
+    extract_network_timeline_events,
+    reconstruct_network_timeline,
+)
+
+# V5.6 Host-to-Network Correlation Exports
+from forensix.network_correlation import (
+    HostNetworkCorrelationConfig,
+    HostNetworkCorrelator,
+    correlate_host_network_events,
+    extract_host_observed_ips,
+    extract_host_ports,
+    extract_network_ips,
+    extract_network_ports,
+    is_host_event,
+    is_network_event,
+    is_private_or_shared_ip,
+    normalize_ip_address,
+)
+
+# V5.7 Network Detection Rules Exports
+from forensix.network_rules import (
+    DEFAULT_NETWORK_RULE_TIME_WINDOW_SECONDS,
+    RULE_NAME_DNS_QUERY_PATTERN,
+    RULE_NAME_HTTP_REQUEST_PATTERN,
+    RULE_NAME_TLS_SNI_PATTERN,
+    RULE_NAME_PROTOCOL_PORT_PATTERN,
+    RULE_NAME_HOST_NETWORK_CORRELATION,
+    RULE_NET_01_DNS_OBSERVATION,
+    RULE_NET_02_HTTP_OBSERVATION,
+    RULE_NET_03_TLS_SNI_OBSERVATION,
+    RULE_NET_04_SSH_PORT_OBSERVATION,
+    RULE_NET_05_HOST_NETWORK_CORRELATION,
+    NetworkRuleBuilder,
+    create_canonical_network_rules,
+    create_dns_query_rule,
+    create_host_network_correlation_rule,
+    create_http_request_rule,
+    create_network_protocol_port_rule,
+    create_tls_sni_rule,
 )
 
 __all__ = [
@@ -617,4 +728,95 @@ __all__ = [
     "build_v4_triage_parser",
     "execute_triage_v4_cli",
     "triage_v4_main",
+    # V5.8
+    "build_pcap_parser",
+    "execute_pcap_cli",
+    "pcap_main",
+    # V5.1
+    "FORENSIX_V5_NETWORK_NAMESPACE",
+    "NetworkEvidenceRecord",
+    "compute_deterministic_network_id",
+    "create_network_evidence_record",
+    # V5.2
+    "PCAP_MAGIC_MICROSECONDS_BIG",
+    "PCAP_MAGIC_MICROSECONDS_LITTLE",
+    "PCAP_MAGIC_NANOSECONDS_BIG",
+    "PCAP_MAGIC_NANOSECONDS_LITTLE",
+    "PCAPNG_SECTION_HEADER_MAGIC",
+    "PcapError",
+    "PcapCorruptError",
+    "PcapTruncatedError",
+    "PcapUnsupportedError",
+    "PcapGlobalHeader",
+    "PcapParser",
+    "extract_transport_payload",
+    "parse_pcap",
+    "read_pcap",
+    "read_pcap_raw",
+    # V5.3
+    "FORENSIX_V5_NETWORK_EVENT_NAMESPACE",
+    "NetworkEvent",
+    "NetworkEventExtractor",
+    "NetworkEventType",
+    "compute_deterministic_network_event_id",
+    "extract_network_event",
+    "extract_network_events",
+    # V5.4
+    "FORENSIX_V5_NETWORK_METADATA_NAMESPACE",
+    "DnsAnswer",
+    "DnsMetadata",
+    "DnsQuestion",
+    "HttpMetadata",
+    "NetworkApplicationMetadata",
+    "NetworkMetadataExtractor",
+    "TlsMetadata",
+    "compute_deterministic_dns_id",
+    "compute_deterministic_http_id",
+    "compute_deterministic_tls_id",
+    "extract_application_metadata",
+    "extract_metadata_from_packet",
+    "extract_metadata_from_pcap",
+    "parse_dns_payload",
+    "parse_http_payload",
+    "parse_tls_payload",
+    # V5.5
+    "NetworkTimelineAdapter",
+    "NetworkTimelineExtractor",
+    "adapt_network_artifact",
+    "adapt_network_event",
+    "adapt_network_metadata",
+    "adapt_network_record",
+    "extract_network_timeline_events",
+    "reconstruct_network_timeline",
+    # V5.6
+    "HostNetworkCorrelationConfig",
+    "HostNetworkCorrelator",
+    "correlate_host_network_events",
+    "extract_host_observed_ips",
+    "extract_host_ports",
+    "extract_network_ips",
+    "extract_network_ports",
+    "is_host_event",
+    "is_network_event",
+    "is_private_or_shared_ip",
+    "normalize_ip_address",
+    # V5.7
+    "DEFAULT_NETWORK_RULE_TIME_WINDOW_SECONDS",
+    "RULE_NAME_DNS_QUERY_PATTERN",
+    "RULE_NAME_HTTP_REQUEST_PATTERN",
+    "RULE_NAME_TLS_SNI_PATTERN",
+    "RULE_NAME_PROTOCOL_PORT_PATTERN",
+    "RULE_NAME_HOST_NETWORK_CORRELATION",
+    "RULE_NET_01_DNS_OBSERVATION",
+    "RULE_NET_02_HTTP_OBSERVATION",
+    "RULE_NET_03_TLS_SNI_OBSERVATION",
+    "RULE_NET_04_SSH_PORT_OBSERVATION",
+    "RULE_NET_05_HOST_NETWORK_CORRELATION",
+    "NetworkRuleBuilder",
+    "create_canonical_network_rules",
+    "create_dns_query_rule",
+    "create_host_network_correlation_rule",
+    "create_http_request_rule",
+    "create_network_protocol_port_rule",
+    "create_tls_sni_rule",
 ]

@@ -329,6 +329,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if raw_args and raw_args[0] in ("pcap", "network"):
         from forensix.triage_cli import pcap_main
         return pcap_main(raw_args[1:])
+    if raw_args and raw_args[0] in ("memory", "mem"):
+        from forensix.memory_cli import memory_main
+        return memory_main(raw_args[1:])
     if raw_args and raw_args[0] in ("investigate", "triage-v4"):
         from forensix.triage_cli import investigation_main
         return investigation_main(raw_args[1:])

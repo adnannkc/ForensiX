@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>ForensiX — Investigation Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <span class="logo-fx">FX</span>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">ForensiX</h1>
+          <span class="brand-subtitle">Investigation Dashboard</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="badge badge-security" id="badge-security">
+          <span class="status-dot"></span> Loopback Read-Only
+        </span>
+        <span class="badge badge-version" id="badge-version">v5.0.0</span>
+        <button id="btn-refresh" class="btn btn-secondary" title="Re-fetch report registry from local API">
+          <span class="btn-icon">↻</span> Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="main-container">
+    <!-- Notification / Alert Banner -->
+    <div id="alert-banner" class="alert-banner hidden" role="alert">
+      <span id="alert-message" class="alert-message"></span>
+      <button id="btn-alert-dismiss" class="btn-alert-close" aria-label="Dismiss">&times;</button>
+    </div>
+
+    <!-- Loading State -->
+    <section id="loading-state" class="state-container hidden">
+      <div class="spinner"></div>
+      <p class="state-title">Loading Forensic Reports...</p>
+      <p class="state-subtitle">Querying local read-only report registry.</p>
+    </section>
+
+    <!-- Error State -->
+    <section id="error-state" class="state-container hidden">
+      <div class="state-icon error-icon">⚠</div>
+      <h2 class="state-title" id="error-title">Unable to Connect to Dashboard Service</h2>
+      <p class="state-subtitle" id="error-description">Please ensure the ForensiX dashboard service is running on 127.0.0.1.</p>
+      <button id="btn-error-retry" class="btn btn-primary">Retry Connection</button>
+    </section>
+
+    <!-- VIEW 1: Dashboard Overview -->
+    <section id="view-overview" class="dashboard-view">
+      <!-- Overview Metrics Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total Ingested Reports</div>
+          <div class="metric-value" id="metric-total-reports">0</div>
+          <div class="metric-detail" id="metric-reports-detail">Verified read-only reports</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Registered Schemas</div>
+          <div class="metric-value" id="metric-active-schemas">0</div>
+          <div class="metric-detail" id="metric-schemas-detail">Across 6 supported types</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Analyzed Artifacts &amp; Events</div>
+          <div class="metric-value" id="metric-total-events">0</div>
+          <div class="metric-detail" id="metric-events-detail">Artifacts, events &amp; audit records</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Detections &amp; Correlations</div>
+          <div class="metric-value" id="metric-total-detections">0</div>
+          <div class="metric-detail" id="metric-detections-detail">Observed rule matches &amp; correlations</div>
+        </div>
+      </div>
+
+      <!-- Controls & Filter Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="input-search" class="input-search" placeholder="Filter by report ID, filename, or case..." autocomplete="off">
+        </div>
+        <div class="filter-controls">
+          <label for="select-type-filter" class="filter-label">Schema:</label>
+          <select id="select-type-filter" class="select-filter">
+            <option value="all">All Schemas</option>
+            <option value="evidence_analysis">Evidence Analysis</option>
+            <option value="host_triage">Host Triage</option>
+            <option value="timeline">Timeline</option>
+            <option value="detection">Detection</option>
+            <option value="correlation">Correlation</option>
+            <option value="correlation_detection">Correlation &amp; Detection</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="state-container empty-box hidden">
+        <div class="state-icon empty-icon">📂</div>
+        <h2 class="state-title">No Forensic Reports Ingested</h2>
+        <p class="state-subtitle">
+          The in-memory registry contains no reports. Start the dashboard service with verified ForensiX JSON report files to begin investigation.
+        </p>
+      </div>
+
+      <!-- Reports Table Container -->
+      <div id="reports-table-container" class="table-container">
+        <table class="data-table" id="table-reports">
+          <thead>
+            <tr>
+              <th scope="col">Report Identifier</th>
+              <th scope="col">Schema Type</th>
+              <th scope="col">Source Filename</th>
+              <th scope="col">Size</th>
+              <th scope="col">Counts Summary</th>
+              <th scope="col">Integrity (SHA-256)</th>
+              <th scope="col" class="th-actions">Action</th>
+            </tr>
+          </thead>
+          <tbody id="reports-table-body">
+            <!-- Dynamically populated via safe DOM APIs -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW 2: Report Explorer -->
+    <section id="view-explorer" class="dashboard-view hidden">
+      <!-- Breadcrumb Bar -->
+      <div class="explorer-nav">
+        <div class="nav-button-group">
+          <button id="btn-back-overview" class="btn btn-secondary">
+            <span class="btn-icon">←</span> Back to Reports Overview
+          </button>
+          <button id="btn-back-to-pivots" class="btn btn-secondary hidden">
+            <span class="btn-icon">←</span> Back to Pivot Results
+          </button>
+        </div>
+        <div class="explorer-report-tag">
+          <span class="tag-label">Active Report:</span>
+          <code id="explorer-report-id" class="monospace-tag">rep-loading</code>
+          <span id="explorer-report-type-badge" class="badge">TYPE</span>
+        </div>
+      </div>
+
+      <!-- Forensic Provenance Notice -->
+      <div class="provenance-notice">
+        <div class="notice-icon">ℹ</div>
+        <div class="notice-body">
+          <strong>Forensic Provenance &amp; Path Policy:</strong>
+          Target-system paths (e.g. <code>evidence_root</code>, raw artifact paths) represent observed evidence data retained from source reports.
+          Local dashboard-host storage paths on the analyst system are strictly sanitized and never exposed.
+        </div>
+      </div>
+
+      <!-- Report Metadata Header Card -->
+      <div class="report-header-card">
+        <div class="header-property-group">
+          <div class="property-item">
+            <span class="property-label">Source Filename</span>
+            <span class="property-value" id="exp-filename">—</span>
+          </div>
+          <div class="property-item">
+            <span class="property-label">File Size</span>
+            <span class="property-value" id="exp-filesize">—</span>
+          </div>
+          <div class="property-item property-hash">
+            <span class="property-label">Cryptographic SHA-256</span>
+            <span class="property-value monospace-hash" id="exp-sha256">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explorer Tabs Navigation -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="tab-metadata" id="tab-btn-metadata">Case Metadata</button>
+        <button class="tab-btn" data-tab="tab-summary" id="tab-btn-summary">Summary Metrics</button>
+        <button class="tab-btn" data-tab="tab-raw" id="tab-btn-raw">Forensic Data Explorer</button>
+      </div>
+
+      <!-- Tab 1: Case Metadata -->
+      <div id="tab-metadata" class="tab-panel active">
+        <div class="panel-card">
+          <h3 class="panel-title">Report Case Metadata</h3>
+          <div class="metadata-grid" id="metadata-fields-grid">
+            <!-- Populated via safe DOM -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Summary Counts -->
+      <div id="tab-summary" class="tab-panel hidden">
+        <div class="panel-card">
+          <h3 class="panel-title">Observed Forensic Counts</h3>
+          <div class="summary-counts-grid" id="summary-counts-grid">
+            <!-- Populated via safe DOM -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Raw Forensic Details -->
+      <div id="tab-raw" class="tab-panel hidden">
+        <div class="panel-card">
+          <div class="panel-header-row">
+            <h3 class="panel-title">Raw Forensic Payload Explorer</h3>
+            <div class="raw-actions">
+              <button id="btn-expand-all" class="btn btn-sm btn-secondary">Expand All</button>
+              <button id="btn-collapse-all" class="btn btn-sm btn-secondary">Collapse All</button>
+            </div>
+          </div>
+          <p class="panel-subtitle">Interactive, safe DOM inspection of verified report data.</p>
+          <div id="json-tree-container" class="json-tree-container">
+            <!-- Built dynamically via safe DOM createElement/textContent -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: Pivot Drill-Down Results -->
+    <section id="view-pivots" class="dashboard-view hidden">
+      <!-- Breadcrumb Bar -->
+      <div class="explorer-nav">
+        <div class="nav-button-group">
+          <button id="btn-pivot-back-report" class="btn btn-secondary hidden">
+            <span class="btn-icon">←</span> Back to Active Report
+          </button>
+          <button id="btn-pivot-back-overview" class="btn btn-secondary">
+            <span class="btn-icon">←</span> Back to Reports Overview
+          </button>
+        </div>
+        <div class="explorer-report-tag">
+          <span class="tag-label">Pivot Drill-Down:</span>
+          <code id="pivot-header-query" class="monospace-tag">—</code>
+          <span id="pivot-header-field-badge" class="badge badge-type">—</span>
+        </div>
+      </div>
+
+      <!-- Forensic Match Policy Notice -->
+      <div class="provenance-notice">
+        <div class="notice-icon">ℹ</div>
+        <div class="notice-body">
+          <strong>Factual Value Matching Notice:</strong>
+          Matching records indicate identical observed forensic data points across registered reports.
+          Value matches do NOT establish common host identity, attacker attribution, or causal compromise.
+          Network IP addresses identify observed communication endpoints and do not imply common machine identity.
+        </div>
+      </div>
+
+      <!-- Pivot Query Header Card -->
+      <div class="report-header-card">
+        <div class="header-property-group">
+          <div class="property-item">
+            <span class="property-label">Queried Field Type</span>
+            <span class="property-value" id="pivot-query-field">—</span>
+          </div>
+          <div class="property-item">
+            <span class="property-label">Queried Value</span>
+            <span class="property-value monospace-tag" id="pivot-query-value">—</span>
+          </div>
+          <div class="property-item" id="pivot-item-normalized">
+            <span class="property-label">Normalized Query</span>
+            <span class="property-value monospace-hash" id="pivot-query-normalized">—</span>
+          </div>
+          <div class="property-item hidden" id="pivot-item-namespace">
+            <span class="property-label">Identifier Namespace</span>
+            <span class="property-value" id="pivot-query-namespace">—</span>
+          </div>
+          <div class="property-item hidden" id="pivot-item-scope">
+            <span class="property-label">Evidence / Host Scope</span>
+            <span class="property-value" id="pivot-query-scope">—</span>
+          </div>
+          <div class="property-item">
+            <span class="property-label">Match Counts</span>
+            <span class="property-value" id="pivot-query-counts">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Truncation / Info Banner -->
+      <div id="pivot-truncation-banner" class="alert-banner alert-warning hidden" role="status">
+        <span id="pivot-truncation-text" class="alert-message"></span>
+      </div>
+
+      <!-- Matches Container -->
+      <div class="panel-card">
+        <div class="panel-header-row">
+          <h3 class="panel-title">Cross-Report Matching References</h3>
+          <span id="pivot-matches-badge" class="badge">0 Matches</span>
+        </div>
+        <p class="panel-subtitle">Verified occurrences across all ingested ForensiX reports.</p>
+
+        <!-- Empty State -->
+        <div id="pivot-empty-state" class="state-container empty-box hidden">
+          <div class="state-icon empty-icon">🔍</div>
+          <h3 class="state-title" id="pivot-empty-title">No Matching Occurrences Found</h3>
+          <p class="state-subtitle" id="pivot-empty-desc">
+            No other reports in the local registry contain this exact observed value.
+          </p>
+        </div>
+
+        <!-- Matches List -->
+        <div id="pivot-matches-list" class="pivot-matches-list">
+          <!-- Populated safely via DOM APIs -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal Dialog: Artifact Identifier Namespace Selection -->
+    <div id="modal-namespace" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-namespace-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-namespace-title" class="modal-title">Select Artifact Identifier Namespace</h3>
+          <button id="btn-close-namespace-modal" class="btn-alert-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Artifact identifiers belong to distinct forensic namespaces. To prevent false cross-domain conflation, select the intended identifier namespace for:
+          </p>
+          <div class="modal-target-box">
+            <code id="modal-namespace-value" class="monospace-tag">ART-ID</code>
+          </div>
+          <div class="modal-field-group">
+            <label for="select-artifact-namespace" class="property-label">Identifier Namespace:</label>
+            <select id="select-artifact-namespace" class="select-filter">
+              <option value="unified_artifact_id">Unified Artifact ID (unified_artifact_id)</option>
+              <option value="evidence_id">Evidence ID (evidence_id)</option>
+              <option value="source_artifact_id">Source Artifact ID (source_artifact_id)</option>
+              <option value="source_id">Source ID (source_id)</option>
+              <option value="correlation_id">Correlation ID (correlation_id)</option>
+              <option value="report_id">Report ID (report_id)</option>
+              <option value="payload_artifact_id">Payload Artifact ID (payload_artifact_id)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-namespace" class="btn btn-secondary">Cancel</button>
+          <button id="btn-confirm-namespace" class="btn btn-primary">Query Pivot</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Dialog: PID Scope Confirmation -->
+    <div id="modal-pid-scope" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-pid-scope-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modal-pid-scope-title" class="modal-title">Evidence Scope Required for PID Matching</h3>
+          <button id="btn-close-pid-modal" class="btn-alert-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Process identifiers (PIDs) are ephemeral and reused across systems. ForensiX requires a defensible host or evidence scope to prevent false cross-host conflation for PID:
+          </p>
+          <div class="modal-target-box">
+            PID: <strong id="modal-pid-value" class="monospace-tag">0</strong>
+          </div>
+          <div class="modal-field-group">
+            <label for="input-pid-scope-val" class="property-label">Evidence / Host Scope (required):</label>
+            <input type="text" id="input-pid-scope-val" class="input-search" placeholder="e.g. /mnt/evidence/host01 or host-alpha" autocomplete="off">
+            <span id="modal-pid-scope-error" class="input-error-msg hidden">Scope is required for exact PID matching.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-pid" class="btn btn-secondary">Cancel</button>
+          <button id="btn-confirm-pid" class="btn btn-primary">Query Scoped PID</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <span>ForensiX Platform — Read-Only Digital Forensics &amp; Incident Triage</span>
+      <span class="footer-muted">Air-Gapped Local Operation • Zero Remote Dependencies</span>
+    </div>
+  </footer>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

@@ -33,6 +33,7 @@ import io
 import json
 from pathlib import Path
 import struct
+from typing import Optional
 import unittest
 
 from forensix.artifact_adapters import (

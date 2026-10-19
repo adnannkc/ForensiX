@@ -8,11 +8,15 @@ The goal of ForensiX is to automate and streamline the initial phases of digital
 
 ## Architecture Overview
 
-ForensiX provides three primary operational modes:
+ForensiX provides the following primary operational modes:
 
 1. **V1 Single-File Evidence Analysis**: Point-target cryptographic hashing, metadata extraction, and JSON reporting for individual files.
 2. **V2 Automated Incident Triage**: Multi-stage, end-to-end triage orchestration across an entire Linux evidence directory, culminating in a unified host artifact model, investigation querying, multi-format reporting, and a tamper-evident audit trail.
 3. **V3 Chronological Timeline Reconstruction**: Ingests evidence, adapts extracted artifacts into factual `TimelineEvent` records (V3.3), reconstructs and deduplicates a canonical chronological timeline (V3.4), applies multi-criteria query filters (V3.5), and generates structured JSON and interactive, self-contained HTML forensic timeline reports (V3.6) orchestrated via CLI (V3.7).
+4. **V4 Event Correlation & Detection**: Cross-artifact correlation and declarative detection rule evaluation across timeline events and host artifacts.
+5. **V5 Network & PCAP Forensics**: Local packet capture ingestion, protocol dissection, and network evidence timeline extraction.
+6. **V6 Memory Dump Forensics**: Linux memory dump parsing, kernel artifact extraction, and memory triage reporting.
+7. **V7 Local Investigation Dashboard (In Development)**: Offline, read-only web dashboard and cross-domain pivot index for interactive multi-report investigation.
 
 ### V2 Canonical Triage Pipeline
 
@@ -460,9 +464,21 @@ To ensure transparency and maintain forensic rigor, the boundaries of ForensiX a
 - **Risk Scoring / Severity Ratings**: ForensiX reports factual software states without subjective risk scores.
 - **Compromise Confirmation**: ForensiX does not declare a system "compromised"; conclusions remain the responsibility of the human investigator.
 - **Attack-Chain Correlation**: Automated multi-stage attack reconstruction (e.g. MITRE ATT&CK mapping).
-- **Network / PCAP Forensics**: Packet capture analysis and network flow reassembly.
-- **Memory Forensics**: RAM dump analysis (e.g., Volatility integrations).
-- **Web Dashboard / GUI / Cloud Services**: ForensiX operates strictly as a local CLI and library tool without running background servers or external cloud integrations.
+- **External Cloud / Remote Telemetry**: ForensiX never transmits forensic evidence, telemetry, or reports to external networks or cloud services. All operations remain strictly local, offline, and air-gapped.
+
+---
+
+### V7 — Local Investigation Dashboard & Cross-Domain Pivoting (Active Development)
+
+Milestone V7 introduces an offline, loopback-only interactive investigation dashboard for ForensiX report analysis:
+
+- **Read-Only HTTP Service**: Exposes a GET-only local API (`/api/health`, `/api/reports`, `/api/reports/<id>`, `/api/pivots`, `/api/ingestion`). All mutation methods (POST, PUT, DELETE, PATCH) are rejected with 405 Method Not Allowed.
+- **Loopback-Only Security**: Strictly binds to local loopback addresses (`127.0.0.1`, `localhost`). External, wildcard (`0.0.0.0`), and non-loopback bindings are rejected.
+- **Host-Header Validation**: Validates the HTTP `Host` header against approved local loopback hostnames (`127.0.0.1`, `localhost`, `::1`, `[::1]`) and the actual bound port to mitigate DNS-rebinding attacks.
+- **Cross-Domain Pivot Index**: In-memory typed indexing across 7 pivot types (`case_id`, `sha256`, `artifact_id`, `event_id`, `rule_id`, `ip_address`, `pid`) spanning all 6 ForensiX report schemas.
+- **Defensive Report Ingestion**: Enforces strict size bounding (`--max-report-size`, defaulting to 50 MB) using bounded reads (`max_size_bytes + 1`), cryptographic SHA-256 single-read snapshotting, and deeply immutable payload containers.
+- **Transparent Ingestion Visibility**: Batch directory loading tracks successfully ingested vs skipped or rejected reports, recording actionable reasons without leaking sensitive file contents.
+- **Air-Gapped UI**: Fully self-contained single-page dashboard with zero external CDN dependencies and safe DOM manipulation (no innerHTML interpolation of report data).
 
 ---
 
@@ -490,8 +506,17 @@ To ensure transparency and maintain forensic rigor, the boundaries of ForensiX a
   - [x] V3.6 — Timeline reporting (structured JSON & standalone HTML)
   - [x] V3.7 — CLI integration (`python3 -m forensix timeline`)
   - [x] V3.8 — Final verification, hardening & release readiness *(Local milestone complete; release pending)*
-- [ ] **V4 — Event Correlation & Rule-Based Detection (Planned)**
-- [ ] **V5 — Network & PCAP Forensics (Planned)**
-- [ ] **V6 — Memory Dump Forensics (Planned)**
-- [ ] **V7 — Investigation Web Dashboard & Interactive UI (Planned)**
+- [x] **V4 — Event Correlation & Rule-Based Detection (v4.0.0)**
+  - Detection rule evaluation, correlation graph, investigation reporting, CLI.
+- [x] **V5 — Network & PCAP Forensics (v5.0.0)**
+  - PCAP packet ingestion, network protocol dissection, network timeline integration.
+- [x] **V6 — Memory Dump Forensics (v5.0.0 / v6 capability)**
+  - In-memory artifact extraction, kernel audit trail, memory forensics CLI.
+- [ ] **V7 — Investigation Web Dashboard & Cross-Domain Pivoting (In Active Development)**
+  - [x] V7.1 — Read-only report ingestion layer (`report_reader.py`)
+  - [x] V7.2 — Local read-only HTTP dashboard API (`dashboard_service.py`)
+  - [x] V7.3 — Offline single-page dashboard UI (`dashboard_ui.py`)
+  - [x] V7.4 — In-memory cross-domain pivot indexing & drill-down API
+  - [x] V7.5 — Dashboard CLI integration (`python3 -m forensix dashboard`)
+  - [ ] V7.6 — Final audit fixes and release verification *(In progress; package version remains 5.0.0 until formal release)*
 - [ ] **V8 — Enterprise Integrations & Advanced Reporting (Planned)**

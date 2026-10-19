@@ -38,7 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
             "For automated multi-stage incident triage, use: python3 -m forensix triage --help\n"
             "For timeline reconstruction and querying, use: python3 -m forensix timeline --help\n"
             "For integrated correlation & detection investigation, use: python3 -m forensix investigate --help\n"
-            "For network PCAP forensics and triage, use: python3 -m forensix pcap --help"
+            "For network PCAP forensics and triage, use: python3 -m forensix pcap --help\n"
+            "For local read-only dashboard and cross-domain pivoting, use: python3 -m forensix dashboard --help"
         ),
     )
 
@@ -341,6 +342,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             filtered_args = [a for a in raw_args[1:] if a != "--v4"]
             return triage_v4_main(filtered_args)
         return triage_main(raw_args[1:])
+    if raw_args and raw_args[0] in ("dashboard", "serve", "ui"):
+        from forensix.dashboard_cli import dashboard_main
+        return dashboard_main(raw_args[1:])
     if raw_args and raw_args[0] == "timeline":
         return timeline_main(raw_args[1:])
 

@@ -26,6 +26,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import socket
 import subprocess
@@ -652,7 +653,7 @@ class TestTimelineV3Hardening(unittest.TestCase):
     # =========================================================================
     def test_14_package_version_consistency(self):
         """Verify package version is consistently aligned with pyproject.toml."""
-        self.assertEqual(__version__, __version__)
+        assert re.fullmatch(r"\d+\.\d+\.\d+", __version__) is not None
 
         # Check pyproject.toml
         pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"

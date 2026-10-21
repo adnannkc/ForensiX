@@ -634,9 +634,6 @@ class TestReportingLayer(unittest.TestCase):
 
     def test_36_default_report_version_v2_regression(self):
         """36. Verify default report-builder version equals package version in ReportMetadata, JSON, and HTML."""
-        # 1. Verify application version matches package version
-        self.assertEqual(__version__, __version__)
-
         report = build_forensic_report(self.collection)
         # 2. Prove default version in ReportMetadata matches __version__
         self.assertEqual(report.metadata.forensix_version, __version__)

@@ -164,7 +164,7 @@ class TestReportingLayer(unittest.TestCase):
         self.assertEqual(report.metadata.case_name, "Incident Response Triage")
         self.assertEqual(report.metadata.investigator, "Lead Analyst")
         self.assertEqual(report.metadata.evidence_root, "/evidence")
-        self.assertEqual(report.metadata.forensix_version, "8.0.0")
+        self.assertEqual(report.metadata.forensix_version, __version__)
         self.assertEqual(report.total_artifacts, 5)
 
     def test_02_required_metadata_validation(self):
@@ -633,23 +633,23 @@ class TestReportingLayer(unittest.TestCase):
         self.assertIn("Targeted SSH Investigation", json_text)
 
     def test_36_default_report_version_v2_regression(self):
-        """36. Verify default report-builder version is 8.0.0 in ReportMetadata, JSON, and HTML."""
-        # 1. Verify application version is 8.0.0
-        self.assertEqual(__version__, "8.0.0")
+        """36. Verify default report-builder version equals package version in ReportMetadata, JSON, and HTML."""
+        # 1. Verify application version matches package version
+        self.assertEqual(__version__, __version__)
 
         report = build_forensic_report(self.collection)
-        # 2. Prove default version in ReportMetadata is "8.0.0"
-        self.assertEqual(report.metadata.forensix_version, "8.0.0")
+        # 2. Prove default version in ReportMetadata matches __version__
+        self.assertEqual(report.metadata.forensix_version, __version__)
 
-        # 3. Verify JSON rendering contains "forensix_version": "8.0.0"
+        # 3. Verify JSON rendering contains package version
         json_text = render_json_report(report)
-        self.assertIn('"forensix_version": "8.0.0"', json_text)
+        self.assertIn(f'"forensix_version": "{__version__}"', json_text)
         parsed = json.loads(json_text)
-        self.assertEqual(parsed["metadata"]["forensix_version"], "8.0.0")
+        self.assertEqual(parsed["metadata"]["forensix_version"], __version__)
 
-        # 4. Verify HTML rendering displays "Platform Version: 8.0.0"
+        # 4. Verify HTML rendering displays package version
         html_text = render_html_report(report)
-        self.assertIn("Platform Version: <code>8.0.0</code>", html_text)
+        self.assertIn(f"Platform Version: <code>{__version__}</code>", html_text)
 
 
 if __name__ == "__main__":

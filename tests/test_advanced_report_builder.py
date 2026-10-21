@@ -17,6 +17,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from forensix import __version__
 from forensix.advanced_report_builder import (
     build_advanced_report,
     render_advanced_report_html,
@@ -90,7 +91,7 @@ class TestAdvancedReportBuilder(unittest.TestCase):
         self.assertEqual(report.report_schema, ADVANCED_REPORT_SCHEMA_VERSION)
         self.assertTrue(is_valid_advanced_report_id(report.report_id))
         self.assertEqual(report.created_at, "2026-10-20T12:00:00Z")
-        self.assertEqual(report.forensix_version, "8.0.0")
+        self.assertEqual(report.forensix_version, __version__)
         self.assertEqual(report.case_metadata["case_id"], "CASE-2026-001")
         self.assertEqual(len(report.evidence_inventory), 0)
         self.assertEqual(report.findings_summary.total_host_artifacts, 0)

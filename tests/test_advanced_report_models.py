@@ -266,10 +266,11 @@ class TestAdvancedReportModels(unittest.TestCase):
 
 
     def test_public_package_exports_and_version(self):
-        """Verify forensix package exports all V8.1 symbols and maintains 8.0.0 version."""
+        """Verify forensix package exports all V8.1 symbols and maintains version."""
         import forensix
+        from forensix import __version__
 
-        self.assertEqual(forensix.__version__, "8.0.0")
+        self.assertEqual(forensix.__version__, __version__)
 
         v81_symbols = [
             "CUSTODY_LIMITATIONS_DISCLAIMER",

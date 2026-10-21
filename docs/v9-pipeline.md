@@ -126,8 +126,8 @@ The run manifest is saved as strictly `pipeline_manifest.json` in the root of th
 
 ```json
 {
-  "run_id": "RUN-8936c6bd-a02b-43e7-a310-b6de63ae4efa",
-  "forensix_version": "8.0.0",
+  "run_id": "RUN-b69f5ceb-1a33-4ff7-bf0f-f21bf7c0c7b7",
+  "forensix_version": "9.0.0",
   "started_at": "2026-10-21T06:18:58.123456+00:00",
   "completed_at": "2026-10-21T06:18:58.159678+00:00",
   "total_duration_seconds": 0.0362,
@@ -150,20 +150,20 @@ The run manifest is saved as strictly `pipeline_manifest.json` in the root of th
   "generated_files": [
     {
       "relative_path": "report_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "927e26cac3043292632329b0bb2b07906714d639db7d7868d84ccd7725518929",
+      "sha256": "47e79fede1f1c8f1a7201c648d600f819b76b66685cc0ec8e23ec07efbc5d3d6",
       "size_bytes": 9796,
       "file_type": "advanced_report_json"
     },
     {
       "relative_path": "report_CASE-2026-SYNTHETIC-001.html",
-      "sha256": "cd26ca41d7f8a685d9dadb7a1c92a3e9ad5d263872ba79abbdf228f4725128a2",
+      "sha256": "842391502c65101b879449fa36e009634e6a02adec1ee64ad1ce92b74303b198",
       "size_bytes": 20316,
       "file_type": "advanced_report_html"
     },
     {
       "relative_path": "ledger_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "6a25975922c97211d0e67e7fd8ca3a2cb965edbf8f3be35c7a565f6707d799a7",
-      "size_bytes": 4912,
+      "sha256": "6bcd05ea5b09b774a27dcfba25136b3d14698d46b8ad51ea0d813d33d81231cd",
+      "size_bytes": 4943,
       "file_type": "custody_ledger_json"
     }
   ],
@@ -208,32 +208,32 @@ ForensiX V9 - Controlled Investigation Pipeline Execution Summary
 Case ID      : CASE-2026-SYNTHETIC-001
 Case Name    : Synthetic Multi-Domain Forensic Investigation
 Investigator : Chief Digital Forensics Examiner
-Run ID       : RUN-8936c6bd-a02b-43e7-a310-b6de63ae4efa
+Run ID       : RUN-b69f5ceb-1a33-4ff7-bf0f-f21bf7c0c7b7
 Run Status   : SUCCESS
-Duration     : 0.0362s
-Version      : ForensiX 8.0.0
+Duration     : 0.0396s
+Version      : ForensiX 9.0.0
 ------------------------------------------------------------------------------
 Stage Execution Summary:
   [01/12] CONFIG_VALIDATION ......... COMPLETED (0.0002s, 3 records)
   [02/12] PREFLIGHT_VERIFICATION .... COMPLETED (0.0002s, 2 records)
-  [03/12] CUSTODY_INITIALIZATION .... COMPLETED (0.0006s, 3 records)
-  [04/12] HOST_ANALYSIS ............. COMPLETED (0.0079s, 42 records)
-  [05/12] NETWORK_ANALYSIS .......... COMPLETED (0.0013s, 6 records)
+  [03/12] CUSTODY_INITIALIZATION .... COMPLETED (0.0033s, 3 records)
+  [04/12] HOST_ANALYSIS ............. COMPLETED (0.0081s, 42 records)
+  [05/12] NETWORK_ANALYSIS .......... COMPLETED (0.0014s, 6 records)
   [06/12] MEMORY_ANALYSIS ........... COMPLETED (0.0017s, 6 records)
   [07/12] TIMELINE_RECONSTRUCTION ... COMPLETED (0.0002s, 40 records)
-  [08/12] CORRELATION ............... COMPLETED (0.0204s, 432 records)
+  [08/12] CORRELATION ............... COMPLETED (0.0206s, 432 records)
   [09/12] DETECTION ................. COMPLETED (0.0011s, 7 records)
-  [10/12] REPORT_SYNTHESIS .......... COMPLETED (0.0017s, 2 records)
+  [10/12] REPORT_SYNTHESIS .......... COMPLETED (0.0019s, 2 records)
   [11/12] CUSTODY_FINALIZATION ...... COMPLETED (0.0006s, 4 records)
   [12/12] RUN_MANIFEST .............. COMPLETED (0.0000s, 3 records)
 ------------------------------------------------------------------------------
 Generated Artifacts & Cryptographic Digests:
   • report_CASE-2026-SYNTHETIC-001.json  (9.6 KB, advanced_report_json)
-    SHA-256: 927e26cac3043292632329b0bb2b07906714d639db7d7868d84ccd7725518929
+    SHA-256: 47e79fede1f1c8f1a7201c648d600f819b76b66685cc0ec8e23ec07efbc5d3d6
   • report_CASE-2026-SYNTHETIC-001.html  (19.8 KB, advanced_report_html)
-    SHA-256: cd26ca41d7f8a685d9dadb7a1c92a3e9ad5d263872ba79abbdf228f4725128a2
+    SHA-256: 842391502c65101b879449fa36e009634e6a02adec1ee64ad1ce92b74303b198
   • ledger_CASE-2026-SYNTHETIC-001.json  (4.8 KB, custody_ledger_json)
-    SHA-256: 6a25975922c97211d0e67e7fd8ca3a2cb965edbf8f3be35c7a565f6707d799a7
+    SHA-256: 6bcd05ea5b09b774a27dcfba25136b3d14698d46b8ad51ea0d813d33d81231cd
 ==============================================================================
 Final Exit Code : 0 (Status: SUCCESS)
 ==============================================================================

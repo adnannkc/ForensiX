@@ -1,171 +1,171 @@
 {
   "case_id": "CASE-2026-SYNTHETIC-001",
   "case_name": "Synthetic Multi-Domain Forensic Investigation",
-  "completed_at": "2026-10-21T06:33:07.509094+00:00",
+  "completed_at": "2026-10-21T07:31:03.069133+00:00",
   "evidence_digests": {
     "memory_artifacts.json": "1f1ce33b4823c65964331ce08eab1d9435f7c069694263f4518a6be0a28516cd",
     "traffic_incident.pcap": "346124e120b721cc2161c7d6c04ffd721c310768a1be66d20b908d631d1a51ef"
   },
-  "forensix_version": "8.0.0",
+  "forensix_version": "9.0.0",
   "generated_files": [
     {
       "file_type": "advanced_report_json",
       "relative_path": "report_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "927e26cac3043292632329b0bb2b07906714d639db7d7868d84ccd7725518929",
+      "sha256": "47e79fede1f1c8f1a7201c648d600f819b76b66685cc0ec8e23ec07efbc5d3d6",
       "size_bytes": 9796
     },
     {
       "file_type": "advanced_report_html",
       "relative_path": "report_CASE-2026-SYNTHETIC-001.html",
-      "sha256": "cd26ca41d7f8a685d9dadb7a1c92a3e9ad5d263872ba79abbdf228f4725128a2",
+      "sha256": "842391502c65101b879449fa36e009634e6a02adec1ee64ad1ce92b74303b198",
       "size_bytes": 20316
     },
     {
       "file_type": "custody_ledger_json",
       "relative_path": "ledger_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "6a25975922c97211d0e67e7fd8ca3a2cb965edbf8f3be35c7a565f6707d799a7",
+      "sha256": "6bcd05ea5b09b774a27dcfba25136b3d14698d46b8ad51ea0d813d33d81231cd",
       "size_bytes": 4943
     }
   ],
   "investigator": "Chief Digital Forensics Examiner",
-  "run_id": "RUN-77764003-7b76-46fc-a1fe-5cf1e0ba6d0d",
+  "run_id": "RUN-b69f5ceb-1a33-4ff7-bf0f-f21bf7c0c7b7",
   "run_status": "SUCCESS",
   "stages": [
     {
-      "completed_at": "2026-10-21T06:33:07.465482+00:00",
-      "duration_seconds": 0.0001654780007811496,
+      "completed_at": "2026-10-21T07:31:03.029796+00:00",
+      "duration_seconds": 0.00015018100020824932,
       "errors": [],
       "metadata": {},
       "records_produced": 3,
       "stage_id": "config_validation",
-      "started_at": "2026-10-21T06:33:07.465304+00:00",
+      "started_at": "2026-10-21T07:31:03.029637+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.465734+00:00",
-      "duration_seconds": 0.0002262960006191861,
+      "completed_at": "2026-10-21T07:31:03.030012+00:00",
+      "duration_seconds": 0.0001938010009325808,
       "errors": [],
       "metadata": {},
       "records_produced": 2,
       "stage_id": "preflight_verification",
-      "started_at": "2026-10-21T06:33:07.465501+00:00",
+      "started_at": "2026-10-21T07:31:03.029813+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.469828+00:00",
-      "duration_seconds": 0.0040675630007172,
+      "completed_at": "2026-10-21T07:31:03.033363+00:00",
+      "duration_seconds": 0.003327032000015606,
       "errors": [],
       "metadata": {},
       "records_produced": 3,
       "stage_id": "custody_initialization",
-      "started_at": "2026-10-21T06:33:07.465755+00:00",
+      "started_at": "2026-10-21T07:31:03.030029+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.478961+00:00",
-      "duration_seconds": 0.009098098000322352,
+      "completed_at": "2026-10-21T07:31:03.041511+00:00",
+      "duration_seconds": 0.008130326999889803,
       "errors": [],
       "metadata": {},
       "records_produced": 42,
       "stage_id": "host_analysis",
-      "started_at": "2026-10-21T06:33:07.469841+00:00",
+      "started_at": "2026-10-21T07:31:03.033374+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.480770+00:00",
-      "duration_seconds": 0.0017537870007799938,
+      "completed_at": "2026-10-21T07:31:03.042960+00:00",
+      "duration_seconds": 0.0014230469987523975,
       "errors": [],
       "metadata": {},
       "records_produced": 6,
       "stage_id": "network_analysis",
-      "started_at": "2026-10-21T06:33:07.479008+00:00",
+      "started_at": "2026-10-21T07:31:03.041528+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.482508+00:00",
-      "duration_seconds": 0.0017178790003526956,
+      "completed_at": "2026-10-21T07:31:03.044667+00:00",
+      "duration_seconds": 0.001686216000962304,
       "errors": [],
       "metadata": {},
       "records_produced": 6,
       "stage_id": "memory_analysis",
-      "started_at": "2026-10-21T06:33:07.480783+00:00",
+      "started_at": "2026-10-21T07:31:03.042975+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.482755+00:00",
-      "duration_seconds": 0.00021955599913781043,
+      "completed_at": "2026-10-21T07:31:03.044867+00:00",
+      "duration_seconds": 0.00018082299902744126,
       "errors": [],
       "metadata": {},
       "records_produced": 40,
       "stage_id": "timeline_reconstruction",
-      "started_at": "2026-10-21T06:33:07.482530+00:00",
+      "started_at": "2026-10-21T07:31:03.044681+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.505470+00:00",
-      "duration_seconds": 0.022695686000588466,
+      "completed_at": "2026-10-21T07:31:03.065437+00:00",
+      "duration_seconds": 0.0205542260009679,
       "errors": [],
       "metadata": {},
       "records_produced": 432,
       "stage_id": "correlation",
-      "started_at": "2026-10-21T06:33:07.482766+00:00",
+      "started_at": "2026-10-21T07:31:03.044876+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.506595+00:00",
-      "duration_seconds": 0.0010988359990733443,
+      "completed_at": "2026-10-21T07:31:03.066517+00:00",
+      "duration_seconds": 0.001056275999872014,
       "errors": [],
       "metadata": {
         "matched_detections": 7
       },
       "records_produced": 7,
       "stage_id": "detection",
-      "started_at": "2026-10-21T06:33:07.505490+00:00",
+      "started_at": "2026-10-21T07:31:03.065456+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.508421+00:00",
-      "duration_seconds": 0.0018037390000245068,
+      "completed_at": "2026-10-21T07:31:03.068458+00:00",
+      "duration_seconds": 0.0019161850013915682,
       "errors": [],
       "metadata": {},
       "records_produced": 2,
       "stage_id": "report_synthesis",
-      "started_at": "2026-10-21T06:33:07.506611+00:00",
+      "started_at": "2026-10-21T07:31:03.066534+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.509071+00:00",
-      "duration_seconds": 0.0006321040000329958,
+      "completed_at": "2026-10-21T07:31:03.069111+00:00",
+      "duration_seconds": 0.0006315539994830033,
       "errors": [],
       "metadata": {},
       "records_produced": 4,
       "stage_id": "custody_finalization",
-      "started_at": "2026-10-21T06:33:07.508434+00:00",
+      "started_at": "2026-10-21T07:31:03.068473+00:00",
       "status": "COMPLETED",
       "warnings": []
     },
     {
-      "completed_at": "2026-10-21T06:33:07.509088+00:00",
-      "duration_seconds": 3.5350003599887714e-06,
+      "completed_at": "2026-10-21T07:31:03.069128+00:00",
+      "duration_seconds": 3.086999640800059e-06,
       "errors": [],
       "metadata": {},
       "records_produced": 3,
       "stage_id": "run_manifest",
-      "started_at": "2026-10-21T06:33:07.509084+00:00",
+      "started_at": "2026-10-21T07:31:03.069124+00:00",
       "status": "COMPLETED",
       "warnings": []
     }
   ],
-  "started_at": "2026-10-21T06:33:07.465208+00:00",
-  "total_duration_seconds": 0.0438610740002332
+  "started_at": "2026-10-21T07:31:03.029554+00:00",
+  "total_duration_seconds": 0.03955621600107406
 }

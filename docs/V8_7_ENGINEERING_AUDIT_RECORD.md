@@ -3,7 +3,7 @@
 ## 1. Overview & Audit Scope
 
 - **Audit Subject**: ForensiX V8.7 — Formal Custody Transfer Workflow & Audit-Trail Integrity Engine, alongside scoped V8.6 Manifest Generator Hardening.
-- **Repository Location**: `/home/adnan/ForensiX`
+- **Repository Location**: `<repo-root>`
 - **Audit Date**: 2026-10-21
 - **Evaluation Purpose**: Durable project preservation of the independent read-only engineering audit conducted on the V8.7 implementation against the approved Final Design Closure Report, implementation authorization, and ForensiX evidentiary principles.
 - **Verification Basis**: Source code inspection and recorded execution of the four approved focused test stages (123 focused tests total). These test figures reflect the results recorded during the authorized audit stage and were not re-executed during this documentation task.
@@ -14,7 +14,7 @@
 
 Prior to and upon conclusion of the V8.7 audit, the working tree state was recorded:
 
-- **Working Directory (`pwd`)**: `/home/adnan/ForensiX`
+- **Working Directory (`pwd`)**: `<repo-root>`
 - **Git Branch Status (`git status --short --branch`)**:
   ```text
   ## main...origin/main

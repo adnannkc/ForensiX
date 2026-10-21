@@ -171,7 +171,7 @@ Rule Matches            :
   RULE-46cf828f-7cb2-5a49-9f37-d2503248c8b1: 1
   RULE-aaef9399-75d2-54dd-ac4f-a0342448b754: 1
 Format                  : JSON
-Report Path             : /home/adnan/ForensiX/reports/network_triage.json
+Report Path             : <repo-root>/reports/network_triage.json
 ------------------------------------------------------------
 Status                  : SUCCESS
 ============================================================

@@ -13,3 +13,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "forensix" = ["ui/*"]
+
+[project.scripts]
+forensix = "forensix.main:main"
+

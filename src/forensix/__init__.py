@@ -754,6 +754,36 @@ from forensix.custody_cli import (
     execute_custody_cli,
 )
 
+# V9 Controlled Multi-Domain Investigation Pipeline Exports
+from forensix.case_config import (
+    ALL_DOMAINS,
+    SUPPORTED_REPORT_FORMATS,
+    CaseConfig,
+    load_case_config_from_dict,
+    load_case_config_from_file,
+    validate_case_config,
+)
+from forensix.pipeline_models import (
+    GeneratedFileRecord,
+    PipelineRunManifest,
+    PipelineRunStatus,
+    PipelineStageId,
+    StageRecord,
+    StageStatus,
+    generate_run_id,
+)
+from forensix.pipeline_engine import (
+    EXIT_VERIFICATION_OR_PARTIAL,
+    InvestigationPipeline,
+    PipelineExecutionResult,
+    run_pipeline,
+)
+from forensix.pipeline_cli import (
+    build_pipeline_parser,
+    execute_pipeline_cli,
+    pipeline_main,
+)
+
 
 __all__ = [
     # V1
@@ -1352,4 +1382,26 @@ __all__ = [
     "build_custody_parser",
     "execute_custody_cli",
     "custody_main",
+    # V9
+    "CaseConfig",
+    "load_case_config_from_file",
+    "load_case_config_from_dict",
+    "validate_case_config",
+    "ALL_DOMAINS",
+    "SUPPORTED_REPORT_FORMATS",
+    "PipelineStageId",
+    "StageStatus",
+    "PipelineRunStatus",
+    "StageRecord",
+    "GeneratedFileRecord",
+    "PipelineRunManifest",
+    "PipelineExecutionResult",
+    "generate_run_id",
+    "InvestigationPipeline",
+    "run_pipeline",
+    "EXIT_VERIFICATION_OR_PARTIAL",
+    "build_pipeline_parser",
+    "execute_pipeline_cli",
+    "pipeline_main",
 ]
+

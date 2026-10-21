@@ -1,0 +1,9 @@
+2026-10-21T07:12:00.100000+00:00 server sshd[1024]: Failed password for invalid user admin from 198.51.100.45 port 41234 ssh2
+2026-10-21T07:12:05.200000+00:00 server sshd[1026]: Failed password for invalid user admin from 198.51.100.45 port 41235 ssh2
+2026-10-21T07:12:10.300000+00:00 server sshd[1028]: Failed password for user_1002 from 198.51.100.45 port 41236 ssh2
+2026-10-21T07:12:15.400000+00:00 server sshd[1030]: Accepted password for user_1002 from 198.51.100.45 port 41237 ssh2
+2026-10-21T07:12:15.500000+00:00 server sshd[1030]: pam_unix(sshd:session): session opened for user user_1002(uid=1002) by (uid=0)
+2026-10-21T07:15:22.100000+00:00 server sudo: user_1002 : TTY=pts/0 ; PWD=/home/user_1002 ; USER=root ; COMMAND=/bin/bash
+2026-10-21T07:15:22.200000+00:00 server sudo: pam_unix(sudo:session): session opened for user root(uid=0) by user_1002(uid=1002)
+2026-10-21T07:20:01.000000+00:00 server sudo: pam_unix(sudo:session): session closed for user root
+2026-10-21T07:25:00.100000+00:00 server sshd[1030]: pam_unix(sshd:session): session closed for user user_1002

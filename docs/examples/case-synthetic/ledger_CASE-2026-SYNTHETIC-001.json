@@ -1,0 +1,101 @@
+{
+  "schema_version": "8.0",
+  "ledger_id": "COCLEDGER-298427f9-9ac9-4890-99fa-8753b49bff7f",
+  "created_at": "2026-10-21T06:33:07.465775+00:00",
+  "case_id": "CASE-2026-SYNTHETIC-001",
+  "description": "Synthetic Multi-Domain Forensic Investigation",
+  "total_events": 4,
+  "terminal_hash": "a7c1f7b674a859117d3bf15f431097f864a35420fa44fd6cd0b2e51b7c8cba1a",
+  "ledger_digest": "a1e552431c7367da90002b9c503158eca2139ccafa8cf8da27afc0c078b9fdab",
+  "events": [
+    {
+      "event_id": "COCEVT-1ce90f4d-2b64-432e-8f46-78ca681dcadd",
+      "sequence_number": 0,
+      "timestamp": "2026-10-21T06:33:07.469278+00:00",
+      "timestamp_source": "HOST_SYSTEM_CLOCK",
+      "action_type": "EVIDENCE_RECEIVED",
+      "evidence_id": "evidence_host",
+      "actor": {
+        "declared_identity": "Chief Digital Forensics Examiner",
+        "role": "Lead Incident Responder",
+        "organization": "ForensiX Incident Response Operations",
+        "contact_info": null
+      },
+      "source_location": "examples/case-synthetic/evidence_host",
+      "destination_location": null,
+      "hashes": {},
+      "verification_method": null,
+      "notes": "Host evidence directory 'evidence_host' ingested into pipeline",
+      "prev_event_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "record_hash": "10bab93cebba8d09ba5ad68ab50a4d0b50957f6f2f9a46092aac1cdaab0453ec"
+    },
+    {
+      "event_id": "COCEVT-01a8a2b9-872e-4921-905f-62e580503467",
+      "sequence_number": 1,
+      "timestamp": "2026-10-21T06:33:07.469574+00:00",
+      "timestamp_source": "HOST_SYSTEM_CLOCK",
+      "action_type": "EVIDENCE_RECEIVED",
+      "evidence_id": "traffic_incident.pcap",
+      "actor": {
+        "declared_identity": "Chief Digital Forensics Examiner",
+        "role": "Lead Incident Responder",
+        "organization": "ForensiX Incident Response Operations",
+        "contact_info": null
+      },
+      "source_location": "examples/case-synthetic/evidence_network/traffic_incident.pcap",
+      "destination_location": null,
+      "hashes": {
+        "sha256": "346124e120b721cc2161c7d6c04ffd721c310768a1be66d20b908d631d1a51ef"
+      },
+      "verification_method": null,
+      "notes": "Network capture 'traffic_incident.pcap' ingested into pipeline",
+      "prev_event_hash": "10bab93cebba8d09ba5ad68ab50a4d0b50957f6f2f9a46092aac1cdaab0453ec",
+      "record_hash": "248a4647515e8a4459bb60ca6353a1be540ef7ad0b9bc4f85eee38e417ed8239"
+    },
+    {
+      "event_id": "COCEVT-bef4a6f5-7e63-4721-804a-e4b3d9bc835c",
+      "sequence_number": 2,
+      "timestamp": "2026-10-21T06:33:07.469754+00:00",
+      "timestamp_source": "HOST_SYSTEM_CLOCK",
+      "action_type": "EVIDENCE_RECEIVED",
+      "evidence_id": "memory_artifacts.json",
+      "actor": {
+        "declared_identity": "Chief Digital Forensics Examiner",
+        "role": "Lead Incident Responder",
+        "organization": "ForensiX Incident Response Operations",
+        "contact_info": null
+      },
+      "source_location": "examples/case-synthetic/evidence_memory/memory_artifacts.json",
+      "destination_location": null,
+      "hashes": {
+        "sha256": "1f1ce33b4823c65964331ce08eab1d9435f7c069694263f4518a6be0a28516cd"
+      },
+      "verification_method": null,
+      "notes": "Memory artifact file 'memory_artifacts.json' ingested into pipeline",
+      "prev_event_hash": "248a4647515e8a4459bb60ca6353a1be540ef7ad0b9bc4f85eee38e417ed8239",
+      "record_hash": "90d3a592ae4ce002ba3551cbf75136d8a5b0508cd0c0dda5c44b25cdfb6e6516"
+    },
+    {
+      "event_id": "COCEVT-b8fb643e-3ad0-44cf-a5f6-c23df79b028a",
+      "sequence_number": 3,
+      "timestamp": "2026-10-21T06:33:07.508449+00:00",
+      "timestamp_source": "HOST_SYSTEM_CLOCK",
+      "action_type": "REPORT_GENERATED",
+      "evidence_id": "REP8-7752be2d-7433-4d4b-817a-a9264a463f2e",
+      "actor": {
+        "declared_identity": "Chief Digital Forensics Examiner",
+        "role": "Lead Incident Responder",
+        "organization": "ForensiX Incident Response Operations",
+        "contact_info": null
+      },
+      "source_location": null,
+      "destination_location": null,
+      "hashes": {},
+      "verification_method": null,
+      "notes": "Generated Schema 8.0 Advanced Forensic Report 'REP8-7752be2d-7433-4d4b-817a-a9264a463f2e' covering multi-domain pipeline execution (run_id: RUN-77764003-7b76-46fc-a1fe-5cf1e0ba6d0d)",
+      "prev_event_hash": "90d3a592ae4ce002ba3551cbf75136d8a5b0508cd0c0dda5c44b25cdfb6e6516",
+      "record_hash": "a7c1f7b674a859117d3bf15f431097f864a35420fa44fd6cd0b2e51b7c8cba1a"
+    }
+  ],
+  "evidentiary_notice": "NOTICE: Cryptographic hash chaining detects modifications to recorded event data when verified against an independently preserved reference digest. Hash chaining alone does NOT authenticate human actor identity, establish legal chain of custody, provide trusted timestamps, or prevent undetectable history rewriting if no external anchor exists."
+}

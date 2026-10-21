@@ -1,0 +1,31 @@
+{
+  "case_id": "CASE-2026-SYNTHETIC-001",
+  "case_name": "Synthetic Multi-Domain Forensic Investigation",
+  "investigator": "Chief Digital Forensics Examiner",
+  "actor_role": "Lead Incident Responder",
+  "actor_org": "ForensiX Incident Response Operations",
+  "evidence_host_dir": "evidence_host",
+  "evidence_pcap_files": [
+    "evidence_network/traffic_incident.pcap"
+  ],
+  "evidence_mem_files": [
+    "evidence_memory/memory_artifacts.json"
+  ],
+  "output_dir": "reports",
+  "report_formats": [
+    "json",
+    "html"
+  ],
+  "enabled_domains": [
+    "host",
+    "network",
+    "memory",
+    "timeline",
+    "correlation",
+    "detection"
+  ],
+  "log_year": 2026,
+  "allow_symlinks": false,
+  "overwrite": true,
+  "fail_fast": false
+}

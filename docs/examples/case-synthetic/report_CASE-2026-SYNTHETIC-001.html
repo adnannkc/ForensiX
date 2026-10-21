@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForensiX Advanced Forensic Report - REP8-7752be2d-7433-4d4b-817a-a9264a463f2e</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --verified-bg: #064e3b;
+            --verified-text: #34d399;
+            --tampered-bg: #7f1d1d;
+            --tampered-text: #f87171;
+            --unverified-bg: #78350f;
+            --unverified-text: #fbbf24;
+            --neutral-bg: #334155;
+            --neutral-text: #cbd5e1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header {
+            border-bottom: 2px solid var(--card-border);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        h1 { font-size: 1.8rem; color: var(--text-main); }
+        .header-meta { font-size: 0.9rem; color: var(--text-muted); }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h2 { font-size: 1.3rem; margin-bottom: 1rem; color: var(--accent); border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; color: var(--text-main); }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .data-table th, .data-table td {
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .data-table th {
+            background-color: rgba(15, 23, 42, 0.6);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .data-table tr:hover { background-color: rgba(51, 65, 85, 0.4); }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .path-cell { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; word-break: break-all; }
+        code {
+            font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+            background-color: rgba(15, 23, 42, 0.8);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-verified { background-color: var(--verified-bg); color: var(--verified-text); }
+        .badge-tampered { background-color: var(--tampered-bg); color: var(--tampered-text); }
+        .badge-unverified { background-color: var(--unverified-bg); color: var(--unverified-text); }
+        .badge-neutral { background-color: var(--neutral-bg); color: var(--neutral-text); }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .metric-box {
+            background-color: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .metric-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+        .metric-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
+        .warnings-list, .omissions-list { margin-left: 1.5rem; margin-bottom: 1rem; }
+        .warnings-list li { color: var(--tampered-text); margin-bottom: 0.3rem; }
+        .omissions-list li { color: var(--unverified-text); margin-bottom: 0.3rem; }
+        .disclaimer-box {
+            background-color: rgba(15, 23, 42, 0.7);
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: pre-line;
+            border-radius: 0 4px 4px 0;
+        }
+        .code-box {
+            background-color: rgba(15, 23, 42, 0.9);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            border: 1px solid var(--card-border);
+        }
+        details summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 0.3rem 0; }
+        footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--card-border);
+            padding-top: 1rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>ForensiX Advanced Forensic Report</h1>
+                <div class="header-meta">Report ID: <code>REP8-7752be2d-7433-4d4b-817a-a9264a463f2e</code> | Schema: <code>8.0</code></div>
+            </div>
+            <div class="header-meta" style="text-align: right;">
+                <div>Generated: 2026-10-21T06:33:07.506840+00:00</div>
+                <div>ForensiX Version: 8.0.0</div>
+            </div>
+        </header>
+
+        <!-- Section 1: Case Information -->
+        <div class="card">
+            <h2>Case Information</h2>
+            <table class="data-table">
+                <tr><th>case_id</th><td><code>CASE-2026-SYNTHETIC-001</code></td></tr>
+<tr><th>case_name</th><td><code>Synthetic Multi-Domain Forensic Investigation</code></td></tr>
+<tr><th>investigator</th><td><code>Chief Digital Forensics Examiner</code></td></tr>
+            </table>
+        </div>
+
+        <!-- Section 2: Chain of Custody -->
+        
+        <div class="card">
+            <h2>Chain of Custody Summary</h2>
+            <table class="data-table">
+                <tr><th>Ledger ID</th><td><code>COCLEDGER-298427f9-9ac9-4890-99fa-8753b49bff7f</code></td></tr>
+                <tr><th>Total Custody Events</th><td class="num">3</td></tr>
+                <tr><th>Terminal Event Hash</th><td><code>90d3a592ae4ce002ba3551cbf75136d8a5b0508cd0c0dda5c44b25cdfb6e6516</code></td></tr>
+                <tr><th>Chain Integrity Status</th><td><span class='badge badge-verified'>VERIFIED</span></td></tr>
+            </table>
+        </div>
+        
+
+        <!-- Section 3: Evidence Inventory -->
+        <div class="card">
+            <h2>Evidence Inventory</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Evidence ID</th>
+                        <th>Relative Path</th>
+                        <th class="num">Size (Bytes)</th>
+                        <th>Cryptographic Hashes</th>
+                        <th>Registered</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan='6'><em>No evidence inventory recorded.</em></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section 4: Analytical Findings Summary -->
+        <div class="card">
+            <h2>Analytical Findings Summary</h2>
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-value">42</div>
+                    <div class="metric-label">Host Artifacts</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">40</div>
+                    <div class="metric-label">Timeline Events</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">432</div>
+                    <div class="metric-label">Correlations</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">7</div>
+                    <div class="metric-label">Rule Evaluations</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">7</div>
+                    <div class="metric-label">Matched Detections</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Investigation Details (Optional) -->
+        
+        <div class="card">
+            <h2>Investigation Details</h2>
+            <details>
+                <summary>Click to view granular details JSON</summary>
+                <pre class="code-box">{
+  &quot;detections&quot;: [
+    {
+      &quot;attributes&quot;: {
+        &quot;rule_description&quot;: &quot;Identifies observed network traffic targeting TCP destination port 22.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-06daf980-489c-5d83-9ace-d8c74dad6c2d&quot;,
+      &quot;end_timestamp&quot;: &quot;2025-10-21T07:12:00.100000+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed network communication directed to TCP destination port 22.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-127fbe4e-c824-4abf-8398-b4a879c3154b&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;NETEVT-44292aec-4ed7-5b0d-a032-dc892f0f1fc9&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-aaef9399-75d2-54dd-ac4f-a0342448b754&quot;,
+      &quot;rule_name&quot;: &quot;Baseline SSH Network Port Observation&quot;,
+      &quot;start_timestamp&quot;: &quot;2025-10-21T07:12:00.100000+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 0.0
+    },
+    {
+      &quot;attributes&quot;: {
+        &quot;rule_description&quot;: &quot;Identifies observed network traffic targeting TCP destination port 22.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-d6f4811a-0912-533d-b22f-58641c6618b6&quot;,
+      &quot;end_timestamp&quot;: &quot;2025-10-21T07:12:15.400000+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed network communication directed to TCP destination port 22.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-ca428e2c-46d1-4766-a2a3-dfd375072ce7&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;NETEVT-3611d26a-f5c4-5fda-a90a-09eb8319e50c&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-aaef9399-75d2-54dd-ac4f-a0342448b754&quot;,
+      &quot;rule_name&quot;: &quot;Baseline SSH Network Port Observation&quot;,
+      &quot;start_timestamp&quot;: &quot;2025-10-21T07:12:15.400000+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 0.0
+    },
+    {
+      &quot;attributes&quot;: {
+        &quot;rule_description&quot;: &quot;Identifies failed SSH authentication attempts followed chronologically by a successful SSH authentication within the configured time window.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-7ed4e288-9dd8-5214-9c57-9c468e27ac9b&quot;,
+      &quot;end_timestamp&quot;: &quot;2026-10-21T07:12:15.400000+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed failed SSH authentication attempts followed by a successful SSH authentication within 300 seconds.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-8185d1ea-b1aa-4ca1-afe0-2c186585c4b0&quot;,
+        &quot;TIMELINE-0f85ce58-3fba-4de0-902e-7aeadaad2458&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [
+        &quot;ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15&quot;
+      ],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;AUTH-78d636a3-d8f4-4b18-b116-a281185f9dc1&quot;,
+        &quot;AUTH-70e81c15-bca6-4e20-b672-28342b9a785e&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-ece7e718-eb79-5259-89c9-5536d162b539&quot;,
+      &quot;rule_name&quot;: &quot;Repeated Failed SSH Attempts Followed by Successful SSH Login&quot;,
+      &quot;start_timestamp&quot;: &quot;2026-10-21T07:12:10.300000+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 5.1
+    },
+    {
+      &quot;attributes&quot;: {
+        &quot;relationship_type&quot;: &quot;AUTHENTICATION_PRIVILEGE&quot;,
+        &quot;rule_description&quot;: &quot;Identifies a successful SSH authentication event followed by privileged sudo command execution by the same identity within the configured time window.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-44fc614c-8f58-5c87-b4e8-45cb71178422&quot;,
+      &quot;end_timestamp&quot;: &quot;2026-10-21T07:15:22.100000+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed a successful SSH authentication followed by privileged sudo execution for the same identity within 300 seconds.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [
+        &quot;CORR-0b76e0ee-fdd8-5768-bb16-da8b97d79135&quot;
+      ],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-0f85ce58-3fba-4de0-902e-7aeadaad2458&quot;,
+        &quot;TIMELINE-57823981-ae17-4d6c-beaa-ce7f9e7ed907&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [
+        &quot;ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15&quot;
+      ],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;AUTH-70e81c15-bca6-4e20-b672-28342b9a785e&quot;,
+        &quot;EVT-03e23ab3-3c2e-4a7c-8cb9-ec50bb18e3eb&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-e4957412-2337-5242-881a-81deb75f505c&quot;,
+      &quot;rule_name&quot;: &quot;SSH Authentication Followed by Sudo&quot;,
+      &quot;start_timestamp&quot;: &quot;2026-10-21T07:12:15.400000+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 186.7
+    },
+    {
+      &quot;attributes&quot;: {
+        &quot;relationship_type&quot;: &quot;AUTHENTICATION_PRIVILEGE&quot;,
+        &quot;rule_description&quot;: &quot;Identifies a successful SSH authentication event followed by privileged sudo command execution by the same identity within the configured time window.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-d2e5adbd-2ff6-53eb-93a4-324bdde7d6d1&quot;,
+      &quot;end_timestamp&quot;: &quot;2026-10-21T07:15:22.100000+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed a successful SSH authentication followed by privileged sudo execution for the same identity within 300 seconds.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [
+        &quot;CORR-87fcbd83-b93b-5eb0-9c2d-ad476523d329&quot;
+      ],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-0f85ce58-3fba-4de0-902e-7aeadaad2458&quot;,
+        &quot;TIMELINE-42662c3e-efd5-481d-b455-3262b6bf6755&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [
+        &quot;ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15&quot;
+      ],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;AUTH-70e81c15-bca6-4e20-b672-28342b9a785e&quot;,
+        &quot;AUTH-e7ee0f06-f987-4d64-92d4-6bcedb533ef4&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-e4957412-2337-5242-881a-81deb75f505c&quot;,
+      &quot;rule_name&quot;: &quot;SSH Authentication Followed by Sudo&quot;,
+      &quot;start_timestamp&quot;: &quot;2026-10-21T07:12:15.400000+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 186.7
+    },
+    {
+      &quot;attributes&quot;: {
+        &quot;relationship_type&quot;: &quot;AUTHENTICATION_PRIVILEGE&quot;,
+        &quot;rule_description&quot;: &quot;Identifies a successful SSH authentication event followed by privileged sudo command execution by the same identity within the configured time window.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-010f0b3e-b757-5c90-9a7f-c4f4d36ce9b0&quot;,
+      &quot;end_timestamp&quot;: &quot;2026-10-21T07:15:22.100000+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed a successful SSH authentication followed by privileged sudo execution for the same identity within 300 seconds.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [
+        &quot;CORR-116388a9-1e6e-5cc7-b4c1-73d4f82370af&quot;
+      ],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-ff17fabd-0b2f-428d-bc4e-e97e82d018eb&quot;,
+        &quot;TIMELINE-42662c3e-efd5-481d-b455-3262b6bf6755&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [
+        &quot;ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15&quot;
+      ],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;EVT-21977f3b-bcdb-4c8f-81a2-898bffcf9b15&quot;,
+        &quot;AUTH-e7ee0f06-f987-4d64-92d4-6bcedb533ef4&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-e4957412-2337-5242-881a-81deb75f505c&quot;,
+      &quot;rule_name&quot;: &quot;SSH Authentication Followed by Sudo&quot;,
+      &quot;start_timestamp&quot;: &quot;2026-10-21T07:12:15.400000+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 186.7
+    },
+    {
+      &quot;attributes&quot;: {
+        &quot;rule_description&quot;: &quot;Identifies observed in-memory execution of process named &#x27;nc&#x27;.&quot;
+      },
+      &quot;detection_id&quot;: &quot;DET-747e685d-9984-5b24-92fc-af957f0734a5&quot;,
+      &quot;end_timestamp&quot;: &quot;2026-10-21T07:17:10+00:00&quot;,
+      &quot;explanation&quot;: &quot;Observed in-memory process execution named &#x27;nc&#x27;.&quot;,
+      &quot;matched&quot;: true,
+      &quot;matched_correlation_ids&quot;: [],
+      &quot;matched_event_ids&quot;: [
+        &quot;TIMELINE-8ef42658-f3da-4827-a3e0-6e5bafe3996b&quot;
+      ],
+      &quot;matched_source_artifact_ids&quot;: [
+        &quot;MEMPROC-cccccccc-3333-4333-8333-333333333333&quot;
+      ],
+      &quot;matched_source_event_ids&quot;: [
+        &quot;MEMEVT-d7aa0442-ee9f-5726-892b-684c97302fc7&quot;
+      ],
+      &quot;rule_id&quot;: &quot;RULE-3cda8f64-f281-57a3-8d56-8bfb05232d01&quot;,
+      &quot;rule_name&quot;: &quot;Baseline Memory Process Name Observation (nc)&quot;,
+      &quot;start_timestamp&quot;: &quot;2026-10-21T07:17:10+00:00&quot;,
+      &quot;time_delta_seconds&quot;: 0.0
+    }
+  ],
+  &quot;memory_artifacts_analyzed&quot;: 6,
+  &quot;network_packets_analyzed&quot;: 6,
+  &quot;pipeline_run_id&quot;: &quot;RUN-77764003-7b76-46fc-a1fe-5cf1e0ba6d0d&quot;,
+  &quot;total_correlations&quot;: 432,
+  &quot;total_detections&quot;: 7,
+  &quot;total_timeline_events&quot;: 40
+}</pre>
+            </details>
+        </div>
+        
+
+        <!-- Section 6: Analytical Limitations & Disclaimers -->
+        <div class="card">
+            <h2>Analytical Limitations &amp; Evidentiary Disclaimers</h2>
+            <h3>Warnings</h3>
+            <p><em>None</em></p>
+
+            <h3>Scope Omissions</h3>
+            <ul class='omissions-list'><li>Evidence inventory was not provided.</li></ul>
+
+            <h3>Evidentiary Notices</h3>
+            <div class="disclaimer-box">Detections, correlations, and forensic artifacts represent automated observations and rule evaluations. They do not constitute conclusive proof of compromise, attribution, or legal culpability.
+
+NOTICE: Cryptographic hash chaining detects modifications to recorded event data when verified against an independently preserved reference digest. Hash chaining alone does NOT authenticate human actor identity, establish legal chain of custody, provide trusted timestamps, or prevent undetectable history rewriting if no external anchor exists.</div>
+        </div>
+
+        <footer>
+            ForensiX Forensic Investigation Platform &bull; Offline Air-Gapped Verifiable Artifact
+        </footer>
+    </div>
+</body>
+</html>

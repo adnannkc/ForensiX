@@ -16,7 +16,9 @@ ForensiX provides the following primary operational modes:
 4. **V4 Event Correlation & Detection**: Cross-artifact correlation and declarative detection rule evaluation across timeline events and host artifacts.
 5. **V5 Network & PCAP Forensics**: Local packet capture ingestion, protocol dissection, and network evidence timeline extraction.
 6. **V6 Memory Dump Forensics**: Linux memory dump parsing, kernel artifact extraction, and memory triage reporting.
-7. **V7 Local Investigation Dashboard (In Development)**: Offline, read-only web dashboard and cross-domain pivot index for interactive multi-report investigation.
+7. **V7 Local Investigation Dashboard**: Offline, read-only web dashboard and cross-domain pivot index for interactive multi-report investigation.
+8. **V8 Advanced Integrity & Chain of Custody**: Cryptographic baseline manifest generation, tamper-evident hash-chained custody ledgers, and Schema 8.0 reporting.
+9. **V9 Controlled Investigation Pipeline**: Unified multi-domain orchestration engine coordinating Host, Network, and Memory evidence across 12 sequential stages with fault containment, output isolation, and machine-readable run manifests (`pipeline_manifest.json`).
 
 ### V2 Canonical Triage Pipeline
 
@@ -152,6 +154,38 @@ ForensiX 2.0.0
 ---
 
 ## Command-Line Usage
+
+### 0. Controlled Investigation Pipeline (V9 Mode — Recommended)
+
+The V9 investigation pipeline coordinates multi-domain forensic analysis across host filesystems, network captures (PCAP), and memory artifacts in 12 dependency-ordered stages:
+
+#### Quickstart
+
+```bash
+# 1. Inspect pipeline usage, arguments, and exit code specifications
+forensix run --help
+
+# 2. Execute an investigation from a case configuration specification
+forensix run --config examples/case-synthetic/case.json --output-dir reports/ --overwrite
+
+# 3. View generated reports, custody ledger, and execution manifest
+ls -la reports/
+cat reports/pipeline_manifest.json
+```
+
+#### Exit Codes
+
+| Exit Code | Constant | Meaning |
+|:---:|---|---|
+| **0** | `EXIT_SUCCESS` | Clean execution; all stages passed and reports synthesized. |
+| **1** | `EXIT_CONFIG_ERROR` | Semantic configuration error, invalid path, or output overlap. |
+| **2** | `EXIT_VERIFICATION_OR_PARTIAL` | Manifest discrepancy or partial domain success. |
+| **3** | `EXIT_CUSTODY_FAILURE` | Custody ledger verification or concurrency lock failure. |
+| **4** | `EXIT_FILESYSTEM_IO_ERROR` | Target file exists (`overwrite=False`), permission error, or I/O failure. |
+
+For full architectural details, stage breakdown, and schema documentation, see [docs/v9-pipeline.md](docs/v9-pipeline.md).
+
+---
 
 ### 1. Chronological Timeline Reconstruction (V3 Mode)
 

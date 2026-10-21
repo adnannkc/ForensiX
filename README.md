@@ -518,39 +518,14 @@ Milestone V7 introduces an offline, loopback-only interactive investigation dash
 
 ## Development Roadmap
 
-- [x] **V1 — Evidence Foundation (v1.0.0)**
-  - Single-file hashing, metadata, registration, unified result, JSON reporting, CLI.
-- [x] **V2 — Host Artifact Triage & Automated Orchestration (v2.0.0)**
-  - [x] V2.1 — Filesystem artifact collection
-  - [x] V2.2 — Linux log parsing
-  - [x] V2.3 — Authentication activity analysis
-  - [x] V2.4 — User account & privilege analysis
-  - [x] V2.5 — Persistence mechanism analysis
-  - [x] V2.6 — Unified HostArtifact model
-  - [x] V2.7 — Investigation & query interface
-  - [x] V2.8 — Multi-format reporting + audit trail
-  - [x] V2.9 — Automated end-to-end triage orchestration
-  - [x] V2.10 — Final validation, cleanup, and v2.0.0 release
-- [x] **V3 — Timeline Reconstruction & Temporal Sequencing (Completed Locally — V3.1–V3.8 — Release Ready)**
-  - [x] V3.1 — Timeline event model
-  - [x] V3.2 — Timestamp normalization engine
-  - [x] V3.3 — Artifact adapters (filesystem, logs, authentication)
-  - [x] V3.4 — Timeline reconstruction, ordering & deduplication
-  - [x] V3.5 — Timeline querying & multi-criteria filtering
-  - [x] V3.6 — Timeline reporting (structured JSON & standalone HTML)
-  - [x] V3.7 — CLI integration (`python3 -m forensix timeline`)
-  - [x] V3.8 — Final verification, hardening & release readiness *(Local milestone complete; release pending)*
-- [x] **V4 — Event Correlation & Rule-Based Detection (v4.0.0)**
-  - Detection rule evaluation, correlation graph, investigation reporting, CLI.
-- [x] **V5 — Network & PCAP Forensics (v5.0.0)**
-  - PCAP packet ingestion, network protocol dissection, network timeline integration.
-- [x] **V6 — Memory Dump Forensics (v5.0.0 / v6 capability)**
-  - In-memory artifact extraction, kernel audit trail, memory forensics CLI.
-- [ ] **V7 — Investigation Web Dashboard & Cross-Domain Pivoting (In Active Development)**
-  - [x] V7.1 — Read-only report ingestion layer (`report_reader.py`)
-  - [x] V7.2 — Local read-only HTTP dashboard API (`dashboard_service.py`)
-  - [x] V7.3 — Offline single-page dashboard UI (`dashboard_ui.py`)
-  - [x] V7.4 — In-memory cross-domain pivot indexing & drill-down API
-  - [x] V7.5 — Dashboard CLI integration (`python3 -m forensix dashboard`)
-  - [ ] V7.6 — Final audit fixes and release verification *(In progress; package version remains 5.0.0 until formal release)*
-- [ ] **V8 — Enterprise Integrations & Advanced Reporting (Planned)**
+ForensiX was built one step at a time. Each version added one job, and V9 puts all the jobs together.
+
+- **V1: Single file check.** Takes one file, fingerprints it, and writes a report. (v1.0.0)
+- **V2: Linux clue finder.** Looks through a Linux system for logs, logins, user accounts, and startup tasks. (v2.0.0, v2.0.1)
+- **V3: Timeline.** Puts events in time order, so you can read what happened like a story. (v3.0.0)
+- **V4: Linking and rules.** Connects related events and checks them against simple rules. A match means "look at this," not "this is bad." (v4.0.0)
+- **V5: Network check.** Reads network capture files and matches the traffic with logins. (v5.0.0)
+- **V6: Memory check.** Reads information from a computer's memory dump. This version has no separate release tag.
+- **V7: Web viewer.** A local web page for opening and browsing reports on your own computer. (v7.0.0)
+- **V8: Records and report.** Checks that evidence files haven't changed, keeps a record of who handled them, and writes a full report. (v8.0.0)
+- **V9: One command.** Runs all the steps above from one case file and saves everything in one place. (v9.0.0)

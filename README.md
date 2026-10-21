@@ -1,531 +1,139 @@
 # ForensiX
 
-ForensiX is a lightweight, Linux-oriented automated digital forensics and incident triage platform built using only the Python standard library.
+ForensiX is a Python tool that helps a digital forensic investigator work through Linux evidence in order. It checks files, reads logs, builds a timeline, links related events, and writes reports.
 
-The goal of ForensiX is to automate and streamline the initial phases of digital forensic investigations—from raw evidence ingestion to multi-stage artifact collection, parsing, structured investigation queries, and multi-format reporting—while adhering strictly to fundamental forensic integrity and safety principles.
+It uses only the Python standard library, so there is nothing extra to install.
 
----
+**Important:** ForensiX shows what the evidence says. It does not decide that a system was hacked or that someone did something wrong. Those conclusions belong to the investigator.
 
-## Architecture Overview
+## What It Does
 
-ForensiX provides the following primary operational modes:
+Think of it as a careful assistant that never touches the original evidence:
 
-1. **V1 Single-File Evidence Analysis**: Point-target cryptographic hashing, metadata extraction, and JSON reporting for individual files.
-2. **V2 Automated Incident Triage**: Multi-stage, end-to-end triage orchestration across an entire Linux evidence directory, culminating in a unified host artifact model, investigation querying, multi-format reporting, and a tamper-evident audit trail.
-3. **V3 Chronological Timeline Reconstruction**: Ingests evidence, adapts extracted artifacts into factual `TimelineEvent` records (V3.3), reconstructs and deduplicates a canonical chronological timeline (V3.4), applies multi-criteria query filters (V3.5), and generates structured JSON and interactive, self-contained HTML forensic timeline reports (V3.6) orchestrated via CLI (V3.7).
-4. **V4 Event Correlation & Detection**: Cross-artifact correlation and declarative detection rule evaluation across timeline events and host artifacts.
-5. **V5 Network & PCAP Forensics**: Local packet capture ingestion, protocol dissection, and network evidence timeline extraction.
-6. **V6 Memory Dump Forensics**: Linux memory dump parsing, kernel artifact extraction, and memory triage reporting.
-7. **V7 Local Investigation Dashboard**: Offline, read-only web dashboard and cross-domain pivot index for interactive multi-report investigation.
-8. **V8 Advanced Integrity & Chain of Custody**: Cryptographic baseline manifest generation, tamper-evident hash-chained custody ledgers, and Schema 8.0 reporting.
-9. **V9 Controlled Investigation Pipeline**: Unified multi-domain orchestration engine coordinating Host, Network, and Memory evidence across 12 sequential stages with fault containment, output isolation, and machine-readable run manifests (`pipeline_manifest.json`).
+1. It checks a single file and fingerprints it, so you can prove later that it did not change.
+2. It looks through a Linux system for logs, logins, user accounts, and startup tasks.
+3. It puts everything into one timeline, sorted by time.
+4. It checks related events against simple rules and tells you what matched.
+5. It reads network capture files and memory dumps, and adds them to the same picture.
+6. It writes reports you can open in a browser or a spreadsheet.
 
-### V2 Canonical Triage Pipeline
+The newest command, `forensix run`, does all of this in one step from a single case file.
 
-```text
-Evidence Directory
-       ↓
-[ Stage 1 ] Evidence Validation
-       ↓
-[ Stage 2 ] Filesystem Artifact Collection
-       ↓
-[ Stage 3 ] Linux Log Parsing
-       ↓
-[ Stage 4 ] Authentication Activity Analysis
-       ↓
-[ Stage 5 ] User Account & Privilege Analysis
-       ↓
-[ Stage 6 ] Persistence Mechanism Analysis
-       ↓
-[ Stage 7 ] Unified Host Artifact Model (Canonical HostArtifact)
-       ↓
-[ Stage 8 ] Investigation & Query Interface (InvestigationResultSet)
-       ↓
-[ Stage 9 ] Multi-Format Reporting (JSON / CSV / HTML) + Audit Trail
-       ↓
-TriageResult
-```
+## Safety Rules
 
-### V3 Timeline Reconstruction Pipeline
+- **Read only.** Evidence files are opened for reading only. Nothing is changed, renamed, or deleted.
+- **Never run.** Evidence files are never executed.
+- **Separate output.** Reports cannot be saved inside the evidence folder.
+- **Offline.** ForensiX does not send anything to the internet. The only network feature is the local dashboard, which runs on your own computer only.
+- **One exception.** Memory analysis can call Volatility 3, an outside tool, to read a raw memory image. It runs only when you ask for it, and it never uses a shell.
 
-```text
-Evidence Directory
-       ↓
-Existing Evidence Analysis (V2 Triage Orchestrator)
-       ↓
-Extracted Forensic Artifacts (HostArtifactCollection)
-       ↓
-V3.3 Artifact Adapters (Filesystem, Log, Auth)
-       ↓
-TimelineEvent (V3.1 Factual Observation Model)
-       ↓
-V3.4 Timeline Reconstruction (Chronological Order & Deduplication)
-       ↓
-ReconstructedTimeline (Canonical Timeline)
-       ↓
-V3.5 Timeline Querying (Optional Multi-Criteria AND Filter)
-       ↓
-TimelineQueryResult
-       ↓
-V3.6 Timeline Reporting (Structured Model)
-       ↓
-V3.7 Timeline CLI (Orchestration & Status)
-       ↓
-JSON / HTML Reports on Disk
-```
+## Installation
 
----
-
-## Features
-
-### V1 — Evidence Foundation
-- **Evidence Registration**: Registers evidence targets, validates paths, and assigns a unique identifier (`EV-<UUIDv4>`) with UTC timestamps.
-- **Filesystem Metadata Extraction**: Reads file size, POSIX permissions (octal format, e.g. `0644`), and ISO 8601 UTC timestamps (`mtime`, `atime`, `btime` when available).
-- **Cryptographic Hashing**: Computes dual cryptographic digests (MD5 and SHA-256) in a single streaming pass using fixed 64 KB memory buffers.
-- **Unified Forensic Analysis Result**: Binds all data into immutable dataclass structures (`ForensicAnalysisResult`).
-- **JSON Reporting**: Generates structured, human-readable JSON reports formatted in UTF-8 into an isolated output directory.
-
-### V2 — Host Artifact Triage & Automated Orchestration
-- **Filesystem Artifact Collection (V2.1)**: Scans evidence targets for key forensic artifacts across `/etc`, `/var/log`, `/home`, etc., extracting metadata, computing SHA-256 hashes, and safely flagging unreadable files.
-- **Linux Log Parsing (V2.2)**: Streaming parser for standard Linux syslog, `auth.log`, systemd journal exports, rotated logs (`.1`), and compressed logs (`.gz`). Defensive parsing guarantees that malformed lines never halt execution.
-- **Authentication Analysis (V2.3)**: Extracts authentication attempts, SSH login methods, failed/successful credentials, sudo elevations, and session open/close events with source IP tracking.
-- **Account & Privilege Analysis (V2.4)**: Parses `/etc/passwd`, `/etc/group`, `/etc/shadow`, `/etc/sudoers` & `/etc/sudoers.d/`, and user `~/.ssh/authorized_keys`. Identifies UID 0 non-root accounts, passwordless accounts, and group memberships.
-- **Persistence Analysis (V2.5)**: Audits cron schedules (`/etc/crontab`, `/etc/cron.*`, user crontabs), systemd units (`/etc/systemd/system`, `/lib/systemd/system`), and shell startup scripts (`/etc/profile`, `/etc/profile.d/`, `~/.bashrc`).
-- **Unified Host Model (V2.6)**: Normalizes all specialized records into a canonical, deeply immutable `HostArtifact` schema with unique IDs (`HOSTART-<UUIDv4>`), category tags, and provenance links.
-- **Investigation & Query Interface (V2.7)**: High-performance in-memory query engine supporting filtering by category, time range, source path, search terms, and structured aggregations (`InvestigationResultSet`).
-- **Multi-Format Reporting & Audit Trail (V2.8)**: Generates valid JSON, RFC 4180 CSV, and standalone HTML5 reports with embedded CSS and strict XSS escaping. Maintains a tamper-evident, append-only `AuditEvent` trail.
-- **Automated End-to-End Orchestrator (V2.9)**: Manages stage execution with dependency cascades, failure isolation, partial execution handling, source traceability (`AUTH -> EVT -> ART`), CLI interface, safety controls, determinism, and idempotent execution.
-- **Final Release & Validation (V2.10)**: Clean, reproducible release with 100% test pass rate across the full 434-test regression suite.
-
-### V3 — Chronological Timeline Reconstruction (Implemented Milestone)
-- **Timeline Event Model (V3.1)**: Immutable, factual observation model (`TimelineEvent`) with `event_id` (`TIMELINE-<UUIDv4>`), explicit timestamps, source metadata, provenance tracking, and strict rejection of speculative conclusions.
-- **Timestamp Normalization Engine (V3.2)**: Forensically sound, deterministic parser for ISO 8601, RFC 3339, syslog, and common timestamp representations into canonical UTC datetimes while keeping timezone-naive inputs naive.
-- **Artifact Adapters (V3.3)**: Pure adapter layer converting filesystem records, syslog entries, and authentication records into `TimelineEvent` records without duplicating analysis or parsers.
-- **Timeline Reconstruction & Ordering (V3.4)**: Chronological ordering, deterministic tie-breaking, duplicate detection, and proven idempotency: `reconstruct(reconstruct(events)) == reconstruct(events)`.
-- **Timeline Query Engine (V3.5)**: High-performance in-memory filtering supporting start/end timestamps, category, event_type, source_path, tracking IDs, and substring search with strict logical AND semantics.
-- **Timeline Reporting (V3.6)**: Structured, deterministic JSON reports and self-contained, air-gap-safe HTML5 reports with strict XSS sanitization.
-- **Timeline CLI Integration (V3.7)**: `python3 -m forensix timeline <evidence_dir>` CLI orchestration with flexible formatting, filtering, and case metadata options.
-- **Final Hardening & Verification (V3.8)**: Complete test coverage (667 tests passing), evidence SHA-256 immutability verification, offline/safety auditing, and release readiness.
-
----
-
-## Safety & Forensic Principles
-
-ForensiX is designed to handle evidence with strict forensic discipline:
-
-- **Strictly Read-Only Access**: All evidence files are opened strictly in binary read-only mode (`mode="rb"`).
-- **Zero Evidence Modification**: ForensiX never writes, modifies, renames, moves, or deletes files inside the evidence directory.
-- **Zero Evidence Execution**: ForensiX never executes binaries, scripts, or hooks found within evidence targets.
-- **Zero Subprocess / Shell Invocations**: Analysis is performed entirely in-process using pure Python parsers; no external system commands (`os.system`, `subprocess`) are spawned.
-- **Zero Network Activity**: Zero network sockets, HTTP requests, cloud telemetry, or external APIs are used. Analysis is 100% offline.
-- **Output Directory Isolation**: Prohibits placing output reports inside or overlapping the evidence directory.
-- **Deterministic & Idempotent**: Equivalent evidence inputs produce identical logical classifications and report structures; repeated runs produce zero memory leaks or artifact accumulation.
-
----
-
-## Installation & Requirements
-
-ForensiX is written in pure Python and requires only the **Python standard library**. No third-party dependencies are needed.
-
-### Requirements
-- **Python**: Version 3.9 or higher (fully compatible with Python 3.9 through 3.14).
-- **Operating System**: Linux (Kali, Ubuntu, Debian, Fedora, Arch, etc.), macOS, or any POSIX-compliant environment.
-
-### Setup
-Clone the repository and install in editable mode:
+You need Python 3.9 or newer and a Linux system (or another Unix-like system).
 
 ```bash
 git clone https://github.com/adnannkc/ForensiX.git
 cd ForensiX
-python3 -m pip install -e .
+python3 -m pip install .
+forensix --version
 ```
 
-Verify the installation:
+The last command should print `ForensiX 9.0.0`.
+
+## Quick Start
+
+ForensiX includes a small made-up case so you can try it safely:
 
 ```bash
-python3 -m forensix --version
+forensix run --config examples/case-synthetic/case.json -o reports/ --overwrite
+ls reports/
 ```
 
-Output:
-```text
-ForensiX 2.0.0
-```
+The `reports/` folder will contain:
 
----
+- a JSON report and an HTML report you can open in a browser
+- a custody ledger, which records what happened to the evidence
+- `pipeline_manifest.json`, a machine-readable record of each step
 
-## Command-Line Usage
+Sample outputs from this case are in `docs/examples/case-synthetic/`.
 
-### 0. Controlled Investigation Pipeline (V9 Mode — Recommended)
+## Commands
 
-The V9 investigation pipeline coordinates multi-domain forensic analysis across host filesystems, network captures (PCAP), and memory artifacts in 12 dependency-ordered stages:
+| Command | What it does | Version |
+|---|---|---|
+| `forensix run` | Runs the whole investigation from one case file | V9 |
+| `forensix triage` | Checks a Linux evidence folder | V2 |
+| `forensix timeline` | Builds a time-ordered timeline you can filter | V3 |
+| `forensix investigate` | Links related events and checks simple rules | V4 |
+| `forensix pcap` | Reads a network capture file | V5 |
+| `forensix memory` | Reads memory dump information | V6 |
+| `forensix dashboard` | Opens a local web page to browse reports | V7 |
+| `forensix advanced` | Writes a full report with integrity checks | V8 |
+| `forensix manifest` | Creates or checks file fingerprints | V8 |
+| `forensix custody` | Keeps a record of who handled the evidence | V8 |
 
-#### Quickstart
+For help with any command, run `forensix <command> --help`.
+
+## Exit Codes
+
+`forensix run` finishes with one of these codes:
+
+| Code | Meaning |
+|---|---|
+| 0 | Success. Every step passed. |
+| 1 | Configuration error, such as a wrong path or an output folder inside the evidence. |
+| 2 | A check failed, or only part of the investigation finished. |
+| 3 | The custody record failed its check. |
+| 4 | A file or folder problem, such as a permission error or a file that already exists. |
+
+## Versions
+
+ForensiX was built one version at a time. Each version added one job.
+
+- **V1: Single file check.** Fingerprints one file and writes a report. (v1.0.0)
+- **V2: Linux clue finder.** Looks through a Linux system for logs, logins, user accounts, and startup tasks. (v2.0.0, v2.0.1)
+- **V3: Timeline.** Puts events in time order, so you can read what happened like a story. (v3.0.0)
+- **V4: Linking and rules.** Connects related events and checks them against simple rules. A match means "look at this," not "this is bad." (v4.0.0)
+- **V5: Network check.** Reads classic network capture files and matches the traffic with logins. (v5.0.0)
+- **V6: Memory check.** Reads information from a memory dump. This version has no separate release tag. (no tag)
+- **V7: Web viewer.** A local web page for opening and browsing reports on your own computer. (v7.0.0)
+- **V8: Records and report.** Checks that evidence files have not changed, keeps a record of who handled them, and writes a full report. (v8.0.0)
+- **V9: One command.** Runs all the steps above from one case file and saves everything in one place. (v9.0.0)
+
+## Project Layout
+
+- `src/forensix/`: the code
+- `tests/`: the automated tests
+- `examples/case-synthetic/`: a made-up case with fake logs, a fake capture file, and a fake memory file
+- `docs/`: design notes for each version
+- `docs/examples/case-synthetic/`: sample outputs from the made-up case
+
+## Testing
 
 ```bash
-# 1. Inspect pipeline usage, arguments, and exit code specifications
-forensix run --help
-
-# 2. Execute an investigation from a case configuration specification
-forensix run --config examples/case-synthetic/case.json --output-dir reports/ --overwrite
-
-# 3. View generated reports, custody ledger, and execution manifest
-ls -la reports/
-cat reports/pipeline_manifest.json
+PYTHONPATH=src python3 -m pytest -q
 ```
 
-#### Exit Codes
+The expected result is `1768 passed, 284 subtests passed`.
 
-| Exit Code | Constant | Meaning |
-|:---:|---|---|
-| **0** | `EXIT_SUCCESS` | Clean execution; all stages passed and reports synthesized. |
-| **1** | `EXIT_CONFIG_ERROR` | Semantic configuration error, invalid path, or output overlap. |
-| **2** | `EXIT_VERIFICATION_OR_PARTIAL` | Manifest discrepancy or partial domain success. |
-| **3** | `EXIT_CUSTODY_FAILURE` | Custody ledger verification or concurrency lock failure. |
-| **4** | `EXIT_FILESYSTEM_IO_ERROR` | Target file exists (`overwrite=False`), permission error, or I/O failure. |
+## What ForensiX Does Not Do
 
-For full architectural details, stage breakdown, and schema documentation, see [docs/v9-pipeline.md](docs/v9-pipeline.md).
+- It does not detect malware or label files as malicious.
+- It does not give risk scores or severity ratings.
+- It does not check threat intelligence feeds or reputation lists.
+- It does not declare a system "compromised."
+- It does not rebuild attack chains or map them to frameworks.
+- It does not send evidence or reports to any cloud service.
 
----
+## Limits
 
-### 1. Chronological Timeline Reconstruction (V3 Mode)
-
-Reconstruct an immutable chronological timeline from evidence artifacts and generate structured JSON or interactive HTML reports:
-
-```bash
-python3 -m forensix timeline <evidence_directory> [OPTIONS]
-```
-
-#### Supported Timeline Options
-
-| Option | Description |
-| :--- | :--- |
-| `evidence_directory` | Positional argument: path to evidence directory. |
-| `--case-id CASE_ID` | Incident tracking identifier (e.g. `CASE-2026-001`). |
-| `--case-name CASE_NAME` | Human-readable title for the investigation. |
-| `--investigator NAME` | Name or identifier of the forensic investigator. |
-| `-o`, `--output PATH` | Explicit output file path for generated report. |
-| `--format {html,json}` | Report format: `html` (default) or `json`. |
-| `--start TIMESTAMP` | Filter events on or after ISO 8601 timestamp (inclusive). |
-| `--end TIMESTAMP` | Filter events on or before ISO 8601 timestamp (inclusive). |
-| `--category CATEGORY` | Filter by category (`FILESYSTEM`, `LOG`, `AUTHENTICATION`, `ACCOUNT`, `PERSISTENCE`). |
-| `--event-type TYPE` | Exact match for event type classification. |
-| `--source-path PATH` | Exact match for evidence source file path. |
-| `--source-artifact-id ID` | Filter by parent forensic artifact tracking ID. |
-| `--source-event-id ID` | Filter by underlying specialized event ID. |
-| `--text SUBSTRING` | Substring search across descriptions, raw lines, and attributes. |
-| `--case-sensitive` | Enable case-sensitive matching for text queries. |
-| `-v`, `--version` | Display program version and exit. |
-| `-h`, `--help` | Show command-line help message and exit. |
-
-#### Example Timeline Run
-
-```bash
-python3 -m forensix timeline /mnt/evidence/host_01/ \
-    --case-id CASE-2026-001 \
-    --category AUTHENTICATION \
-    --format html \
-    --output ./reports/auth_timeline.html
-```
-
----
-
-### 2. Automated Incident Triage (V2 Mode)
-
-Execute end-to-end triage against an evidence directory containing collected host artifacts:
-
-```bash
-python3 -m forensix triage <evidence_directory> [OPTIONS]
-```
-
-#### Supported Options
-
-| Option | Description |
-| :--- | :--- |
-| `evidence_directory` | Positional argument: path to the target evidence directory. |
-| `--case-id CASE_ID` | Incident tracking identifier (e.g. `CASE-2026-001`). |
-| `--case-name CASE_NAME` | Human-readable title for the investigation. |
-| `--investigator NAME` | Name or identifier of the forensic investigator. |
-| `-o`, `--output-dir DIR` | Destination directory for reports (default: `reports/`). |
-| `--format {json,csv,html}` | Report presentation format(s) to generate (can be repeated). |
-| `--skip-reports` | Execute triage and print terminal summary without writing report files to disk. |
-| `--disable-stage STAGE` | Disable a specific triage stage from execution (can be repeated). |
-| `-v`, `--version` | Display program version and exit. |
-| `-h`, `--help` | Show command-line help message and exit. |
-
-#### Example V2 Run
-
-```bash
-python3 -m forensix triage /mnt/evidence/host_01/ \
-    --case-id CASE-2026-001 \
-    --case-name "Linux Workstation Incident" \
-    --investigator "Lead Analyst" \
-    --output-dir ./investigation_reports \
-    --format json \
-    --format csv \
-    --format html
-```
-
-#### Terminal Summary Example
-
-```text
-================================================================================
-ForensiX Automated Incident Triage (v2.0.0)
-================================================================================
-Triage ID   : 8f4a1322-921c-4394-bb9e-473d09a2b53c
-Case ID     : CASE-2026-001
-Case Name   : Linux Workstation Incident
-Investigator: Lead Analyst
-Evidence    : /mnt/evidence/host_01
-Status      : COMPLETED
-Duration    : 0.12s
-Artifacts   : 48
-
-Stage Execution Summary:
-  [✓ COMPLETED] Evidence Validation (records: 1)
-  [✓ COMPLETED] Filesystem Artifact Collection (records: 14)
-  [✓ COMPLETED] Linux Log Parsing (records: 18)
-  [✓ COMPLETED] Authentication Activity Analysis (records: 10)
-  [✓ COMPLETED] User Account & Privilege Analysis (records: 15)
-  [✓ COMPLETED] Persistence Mechanism Analysis (records: 5)
-  [✓ COMPLETED] Unified Host Artifact Model (records: 48)
-  [✓ COMPLETED] Investigation Query Interface (records: 48)
-  [✓ COMPLETED] Multi-Format Forensic Reporting (records: 3)
-
-Generated Reports:
-  JSON : /mnt/investigation_reports/report_8f4a1322-921c-4394-bb9e-473d09a2b53c.json
-  CSV  : /mnt/investigation_reports/report_8f4a1322-921c-4394-bb9e-473d09a2b53c.csv
-  HTML : /mnt/investigation_reports/report_8f4a1322-921c-4394-bb9e-473d09a2b53c.html
-================================================================================
-```
-
----
-
-### 3. Single-File Analysis (V1 Compatibility Mode)
-
-Analyze an individual evidence file for cryptographic integrity and file metadata:
-
-```bash
-python3 -m forensix <evidence_file> [-o OUTPUT_DIR]
-```
-
-Example:
-
-```bash
-python3 -m forensix /path/to/suspect_binary.bin -o ./reports
-```
-
-Output:
-```text
-==================================================
-ForensiX Analysis Complete
-==================================================
-Evidence ID : EV-387d74e8-af84-4205-9199-76d03c3c9f32
-File        : suspect_binary.bin
-Size        : 4128 bytes
-Type        : application/octet-stream
-MD5         : c98d3632cfba9828d13b4c1001eeac37
-SHA-256     : 4402a77918a55e2d1d3a54d52fecefe3b86e088fef27b4b1a29c9a622f6fa754
-Report      : reports/EV-387d74e8-af84-4205-9199-76d03c3c9f32.json
-==================================================
-```
-
----
-
-## Report Formats
-
-ForensiX generates three standalone, standardized report formats:
-
-1. **JSON (`.json`)**:
-   - Machine-parseable, structured representation containing report metadata, unified artifacts with specialized payloads, stage execution metrics, provenance trace records, and the full audit trail.
-2. **CSV (`.csv`)**:
-   - RFC 4180 compliant tabular export suitable for spreadsheet tools (Excel, LibreOffice) and timeline imports. Stable columns: `unified_id`, `category`, `source_id`, `source_path`, `timestamp`, `summary`.
-3. **HTML (`.html`)**:
-   - Standalone HTML5 document with embedded modern CSS. Includes zero external CDN links or remote fonts (safe for air-gapped viewing), escapes all evidence-controlled strings against XSS, and presents clear category breakdowns, stage results, and investigation findings.
-
----
-
-## Project Structure
-
-```text
-ForensiX/
-├── pyproject.toml              # Package configuration and build metadata (version 2.0.1)
-├── README.md                   # Complete platform documentation
-├── docs/                       # Architectural documentation and milestone specifications
-│   ├── V1_REVIEW.md            # V1 implementation and scope review
-│   ├── V3_1_TIMELINE_EVENT_MODEL.md
-│   ├── V3_2_TIMESTAMP_NORMALIZATION.md
-│   ├── V3_3_ARTIFACT_ADAPTERS.md
-│   ├── V3_4_TIMELINE_RECONSTRUCTION.md
-│   ├── V3_5_TIMELINE_QUERYING.md
-│   ├── V3_6_TIMELINE_REPORTING.md
-│   ├── V3_7_CLI_INTEGRATION.md
-│   └── V3_8_FINAL_VERIFICATION.md
-├── evidence/                   # Working evidence directory (gitignored)
-│   └── .gitkeep
-├── reports/                    # Generated forensic reports directory (gitignored)
-│   └── .gitkeep
-├── src/
-│   └── forensix/               # Core ForensiX package
-│       ├── __init__.py         # Package entry and canonical exports
-│       ├── __main__.py         # Module execution dispatcher ('python3 -m forensix')
-│       ├── main.py             # CLI parser and workflow execution
-│       ├── hasher.py           # Streaming MD5 and SHA-256 hashing engine
-│       ├── analyzer.py         # File metadata and identification engine
-│       ├── evidence.py         # Evidence registration and validation
-│       ├── reporter.py         # V1 JSON report generator
-│       ├── artifacts.py        # V2.1 filesystem artifact models
-│       ├── identifier.py       # V2.1 file category identifier
-│       ├── scanner.py          # V2.1 filesystem artifact scanner
-│       ├── log_models.py       # V2.2 log event models
-│       ├── log_parser.py       # V2.2 streaming syslog/auth parser
-│       ├── auth_models.py      # V2.3 authentication activity models
-│       ├── auth_analyzer.py    # V2.3 authentication activity analyzer
-│       ├── account_models.py   # V2.4 account & privilege models
-│       ├── account_analyzer.py # V2.4 user/group/shadow/sudo/ssh analyzer
-│       ├── persistence_models.py  # V2.5 persistence models
-│       ├── persistence_analyzer.py# V2.5 cron/systemd/profile analyzer
-│       ├── host_artifact.py    # V2.6 canonical HostArtifact model
-│       ├── unified_adapter.py  # V2.6 payload normalization adapters
-│       ├── investigation.py    # V2.7 query engine and result sets
-│       ├── audit.py            # V2.8 immutable audit trail
-│       ├── report_models.py    # V2.8 forensic report models
-│       ├── report_builder.py   # V2.8 report compilation engine
-│       ├── report_json.py      # V2.8 JSON report serializer
-│       ├── report_csv.py       # V2.8 CSV report serializer
-│       ├── report_html.py      # V2.8 standalone HTML serializer
-│       ├── triage_models.py    # V2.9 triage configuration and stage models
-│       ├── triage_orchestrator.py # V2.9 9-stage pipeline orchestrator
-│       ├── timeline_models.py     # V3.1 factual observation model
-│       ├── timestamp_normalizer.py# V3.2 timestamp normalization
-│       ├── artifact_adapters.py   # V3.3 forensic artifact adapters
-│       ├── timeline_reconstruction.py # V3.4 chronological ordering & deduplication
-│       ├── timeline_query.py      # V3.5 multi-criteria query engine
-│       ├── timeline_reporting.py  # V3.6 structured JSON & HTML reporting
-│       └── timeline_cli.py        # V3.7 timeline CLI orchestration
-└── tests/                      # Comprehensive automated test suite (667 tests)
-    ├── test_hasher.py
-    ├── test_analyzer.py
-    ├── test_evidence.py
-    ├── test_unified_result.py
-    ├── test_reporter.py
-    ├── test_cli.py
-    ├── test_end_to_end.py
-    ├── test_artifacts.py
-    ├── test_identifier.py
-    ├── test_scanner.py
-    ├── test_log_parser.py
-    ├── test_auth_activity.py
-    ├── test_account_analyzer.py
-    ├── test_persistence_analyzer.py
-    ├── test_unified_host_model.py
-    ├── test_investigation.py
-    ├── test_reporting.py
-    ├── test_triage_models.py
-    ├── test_triage_orchestrator.py
-    ├── test_triage_traceability.py
-    ├── test_triage_reporting.py
-    ├── test_triage_cli.py
-    ├── test_triage_safety.py
-    ├── test_triage_determinism.py
-    ├── test_triage_idempotency.py
-    ├── test_triage_final_validation.py
-    ├── test_timeline_models.py
-    ├── test_timestamp_normalizer.py
-    ├── test_artifact_adapters.py
-    ├── test_timeline_reconstruction.py
-    ├── test_timeline_query.py
-    ├── test_timeline_reporting.py
-    ├── test_timeline_cli.py
-    └── test_timeline_v3_hardening.py
-```
-
----
-
-## Testing & Quality Assurance
-
-ForensiX includes a comprehensive automated test suite executable via the standard library `unittest` runner or `pytest`:
-
-```bash
-# Standard library test runner
-PYTHONPATH=src python3 -m unittest discover -s tests -v
-
-# Pytest runner (if installed)
-PYTHONPATH=src python3 -m pytest tests/ -v
-```
-
-### Validation Metrics
-- **Test Methods**: 667
-- **Subtests**: 162
-- **Failures**: 0
-- **Errors**: 0
-- **Pass Rate**: 100%
-
-### Test Coverage Highlights
-- **Cryptographic Correctness**: NIST test vector validation, streaming chunk boundaries.
-- **Defensive Parsing**: Resilient handling of malformed logs, missing shadow fields, corrupted crontabs, unreadable files.
-- **Traceability Verification**: Complete provenance cross-referencing from source files to final reports (`AUTH -> EVT -> ART`).
-- **Safety Auditing**: Monitored verification of zero file mutations, zero subprocess execution, zero network access, and output directory isolation.
-- **Determinism & Idempotency**: Normalized multi-run comparisons ensuring identical classifications and zero memory leakage.
-- **Failure Injection**: Testing all 9 stage failure cascades (Scenarios A through K) confirming proper isolation and `SKIPPED` downstream states.
-- **Timeline Reconstruction Integrity**: Ordering verification, cross-timezone instant synchronization, deduplication fingerprinting, idempotency guarantees, and strict XSS sanitization in HTML reporting.
-
----
-
-## Scope & Limitations
-
-To ensure transparency and maintain forensic rigor, the boundaries of ForensiX are explicitly defined:
-
-### Implemented in ForensiX
-- Linux evidence ingestion and registration
-- Filesystem artifact discovery and metadata extraction
-- Linux syslog and authentication activity parsing
-- Account and privilege configuration analysis
-- Cron, systemd, and shell persistence auditing
-- Unified host artifact modeling with provenance tracking
-- In-memory investigation querying and filtering
-- Multi-format reporting (JSON, CSV, HTML) and tamper-evident audit logging
-- Deterministic, safe, automated end-to-end triage orchestration
-- Chronological timeline event modeling, timestamp normalization, and multi-source artifact adaptation
-- Deterministic timeline reconstruction, tie-breaking, and deduplication
-- Multi-criteria timeline querying with strict logical AND filtering
-- Standalone HTML5 timeline reporting (self-contained, zero CDN/network dependencies) and deterministic JSON reporting
-- Dedicated Timeline CLI integration (`python3 -m forensix timeline`)
-
-### Explicitly Excluded / Non-Goals
-- **Malware Analysis / Classification**: ForensiX extracts and organizes host state; it does not classify binaries or declare malware infections.
-- **YARA / Signature Scanning**: Rule-based pattern matching against files or memory.
-- **Threat Intelligence**: External threat feeds, IP reputation checks, or CVE lookups.
-- **Risk Scoring / Severity Ratings**: ForensiX reports factual software states without subjective risk scores.
-- **Compromise Confirmation**: ForensiX does not declare a system "compromised"; conclusions remain the responsibility of the human investigator.
-- **Attack-Chain Correlation**: Automated multi-stage attack reconstruction (e.g. MITRE ATT&CK mapping).
-- **External Cloud / Remote Telemetry**: ForensiX never transmits forensic evidence, telemetry, or reports to external networks or cloud services. All operations remain strictly local, offline, and air-gapped.
-
----
-
-### V7 — Local Investigation Dashboard & Cross-Domain Pivoting (Active Development)
-
-Milestone V7 introduces an offline, loopback-only interactive investigation dashboard for ForensiX report analysis:
-
-- **Read-Only HTTP Service**: Exposes a GET-only local API (`/api/health`, `/api/reports`, `/api/reports/<id>`, `/api/pivots`, `/api/ingestion`). All mutation methods (POST, PUT, DELETE, PATCH) are rejected with 405 Method Not Allowed.
-- **Loopback-Only Security**: Strictly binds to local loopback addresses (`127.0.0.1`, `localhost`). External, wildcard (`0.0.0.0`), and non-loopback bindings are rejected.
-- **Host-Header Validation**: Validates the HTTP `Host` header against approved local loopback hostnames (`127.0.0.1`, `localhost`, `::1`, `[::1]`) and the actual bound port to mitigate DNS-rebinding attacks.
-- **Cross-Domain Pivot Index**: In-memory typed indexing across 7 pivot types (`case_id`, `sha256`, `artifact_id`, `event_id`, `rule_id`, `ip_address`, `pid`) spanning all 6 ForensiX report schemas.
-- **Defensive Report Ingestion**: Enforces strict size bounding (`--max-report-size`, defaulting to 50 MB) using bounded reads (`max_size_bytes + 1`), cryptographic SHA-256 single-read snapshotting, and deeply immutable payload containers.
-- **Transparent Ingestion Visibility**: Batch directory loading tracks successfully ingested vs skipped or rejected reports, recording actionable reasons without leaking sensitive file contents.
-- **Air-Gapped UI**: Fully self-contained single-page dashboard with zero external CDN dependencies and safe DOM manipulation (no innerHTML interpolation of report data).
-
----
+- Host analysis works on Linux only. It does not read Windows or macOS artifacts.
+- Network analysis reads classic PCAP files only. PCAP-NG files are rejected.
+- Raw memory images need Volatility 3 installed separately. ForensiX can also read memory information that has already been extracted to JSON.
+- Old syslog lines do not include a year. Give the year with `--log-year`, or ForensiX will refuse to guess it.
 
 ## Development Roadmap
 
 ForensiX was built one step at a time. Each version added one job, and V9 puts all the jobs together.
 
-- **V1: Single file check.** Takes one file, fingerprints it, and writes a report. (v1.0.0)
-- **V2: Linux clue finder.** Looks through a Linux system for logs, logins, user accounts, and startup tasks. (v2.0.0, v2.0.1)
-- **V3: Timeline.** Puts events in time order, so you can read what happened like a story. (v3.0.0)
-- **V4: Linking and rules.** Connects related events and checks them against simple rules. A match means "look at this," not "this is bad." (v4.0.0)
-- **V5: Network check.** Reads network capture files and matches the traffic with logins. (v5.0.0)
-- **V6: Memory check.** Reads information from a computer's memory dump. This version has no separate release tag.
-- **V7: Web viewer.** A local web page for opening and browsing reports on your own computer. (v7.0.0)
-- **V8: Records and report.** Checks that evidence files haven't changed, keeps a record of who handled them, and writes a full report. (v8.0.0)
-- **V9: One command.** Runs all the steps above from one case file and saves everything in one place. (v9.0.0)
+The roadmap above lists every version and its release tag.

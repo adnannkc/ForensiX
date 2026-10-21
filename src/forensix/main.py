@@ -39,7 +39,10 @@ def build_parser() -> argparse.ArgumentParser:
             "For timeline reconstruction and querying, use: python3 -m forensix timeline --help\n"
             "For integrated correlation & detection investigation, use: python3 -m forensix investigate --help\n"
             "For network PCAP forensics and triage, use: python3 -m forensix pcap --help\n"
-            "For local read-only dashboard and cross-domain pivoting, use: python3 -m forensix dashboard --help"
+            "For local read-only dashboard and cross-domain pivoting, use: python3 -m forensix dashboard --help\n"
+            "For Schema 8.0 advanced triage, manifest verification, and custody tracking, use: python3 -m forensix advanced --help\n"
+            "For Schema 8.0 manifest generation and integrity verification, use: python3 -m forensix manifest --help\n"
+            "For Schema 8.0 custody ledger initialization, transfer, and auditing, use: python3 -m forensix custody --help"
         ),
     )
 
@@ -345,6 +348,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if raw_args and raw_args[0] in ("dashboard", "serve", "ui"):
         from forensix.dashboard_cli import dashboard_main
         return dashboard_main(raw_args[1:])
+    if raw_args and raw_args[0] in ("advanced", "report8"):
+        from forensix.advanced_cli import advanced_main
+        return advanced_main(raw_args[1:])
+    if raw_args and raw_args[0] == "manifest":
+        from forensix.manifest_cli import manifest_main
+        return manifest_main(raw_args[1:])
+    if raw_args and raw_args[0] == "custody":
+        from forensix.custody_cli import custody_main
+        return custody_main(raw_args[1:])
     if raw_args and raw_args[0] == "timeline":
         return timeline_main(raw_args[1:])
 

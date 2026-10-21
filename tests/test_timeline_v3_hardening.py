@@ -651,14 +651,14 @@ class TestTimelineV3Hardening(unittest.TestCase):
     # 14. Package Metadata & Version Consistency
     # =========================================================================
     def test_14_package_version_consistency(self):
-        """Verify package version is consistently '5.0.0'."""
-        self.assertEqual(__version__, "5.0.0")
+        """Verify package version is consistently '8.0.0'."""
+        self.assertEqual(__version__, "8.0.0")
 
         # Check pyproject.toml
         pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
         self.assertTrue(pyproject_path.exists())
         pyproject_text = pyproject_path.read_text(encoding="utf-8")
-        self.assertIn('version = "5.0.0"', pyproject_text)
+        self.assertIn('version = "8.0.0"', pyproject_text)
 
     # =========================================================================
     # 15. V3 Scope Audit: Rejection of Speculative Conclusions

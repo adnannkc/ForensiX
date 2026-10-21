@@ -4,7 +4,7 @@ V1 - Evidence Foundation
 V2 - Host & System Artifacts
 """
 
-__version__ = "5.0.0"
+__version__ = "8.0.0"
 
 # V1 Core Exports
 from forensix.hasher import compute_hashes
@@ -632,6 +632,128 @@ from forensix.dashboard_cli import (
     execute_dashboard_cli,
 )
 
+# V8.1 Chain of Custody Exports
+from forensix.custody_models import (
+    CUSTODY_LIMITATIONS_DISCLAIMER,
+    GENESIS_PREV_HASH,
+    CustodyActionType,
+    CustodyActor,
+    CustodyEvent,
+    TimestampSource,
+    compute_canonical_event_json,
+    compute_canonical_event_payload,
+    compute_event_record_hash,
+    generate_custody_event_id,
+    is_valid_custody_event_id,
+)
+
+# V8.1 Manifest Models Exports
+from forensix.manifest_models import (
+    MANIFEST_SCHEMA_VERSION,
+    HashAlgorithm,
+    ManifestArtifactType,
+    ManifestEntry,
+    ManifestRecord,
+    ManifestVerificationStatus,
+    generate_manifest_id,
+    is_valid_manifest_id,
+    validate_relative_entry_path,
+)
+
+# V8.1 Advanced Report Models Exports
+from forensix.advanced_report_models import (
+    ADVANCED_REPORT_SCHEMA_VERSION,
+    DEFAULT_ANALYTICAL_DISCLAIMER,
+    AdvancedReport,
+    AnalyticalLimitations,
+    CustodySummary,
+    EvidenceInventoryItem,
+    FindingsSummary,
+    generate_advanced_report_id,
+    is_valid_advanced_report_id,
+)
+
+# V8.2 Manifest Integrity Verification Engine Exports
+from forensix.manifest_verifier import (
+    MANIFEST_VERIFICATION_NOTICE,
+    ManifestEntryVerification,
+    ManifestVerificationResult,
+    verify_manifest,
+)
+
+# V8.3 Runtime Chain of Custody Ledger Exports
+from forensix.custody_ledger import (
+    CUSTODY_LEDGER_SCHEMA_VERSION,
+    CustodyChainVerificationResult,
+    CustodyLedger,
+    compute_ledger_digest,
+    generate_custody_ledger_id,
+    is_valid_custody_ledger_id,
+)
+
+# V8.4 Advanced Forensic Report Builder Exports
+from forensix.advanced_report_builder import (
+    build_advanced_report,
+    render_advanced_report_html,
+    render_advanced_report_json,
+    write_advanced_report_html,
+    write_advanced_report_json,
+)
+
+# V8.5 Advanced Forensic Triage Orchestrator & CLI Exports
+from forensix.advanced_orchestrator import (
+    AdvancedTriageConfig,
+    AdvancedTriageOrchestrator,
+    AdvancedTriageResult,
+    CustodyIntegrityError,
+    run_advanced_triage,
+)
+from forensix.advanced_cli import (
+    EXIT_CONFIG_ERROR,
+    EXIT_CUSTODY_FAILURE,
+    EXIT_FILESYSTEM_IO_ERROR,
+    EXIT_SUCCESS,
+    EXIT_VERIFICATION_DISCREPANCY,
+    advanced_main,
+    build_advanced_parser,
+    execute_advanced_cli,
+)
+
+# V8.6 Forensic Manifest Generation Engine & CLI Exports
+from forensix.manifest_generator import (
+    ManifestGeneratorConfig,
+    generate_manifest,
+    save_manifest,
+)
+from forensix.manifest_cli import (
+    build_manifest_parser,
+    execute_manifest_cli,
+    manifest_main,
+)
+
+# V8.7 Formal Custody Transfer Workflow & Audit-Trail Integrity Engine Exports
+from forensix.custody_ledger import StaleLedgerError
+from forensix.custody_transfer import (
+    AuditFinding,
+    CustodyAuditResult,
+    CustodyTransferReceipt,
+    CustodyTransferRecord,
+    CustodyTransferStatus,
+    audit_custody_ledger,
+    generate_custody_receipt_id,
+    generate_custody_transfer_id,
+    generate_transfer_receipt,
+    is_valid_custody_receipt_id,
+    is_valid_custody_transfer_id,
+    parse_transfer_from_event,
+    record_transfer,
+)
+from forensix.custody_cli import (
+    build_custody_parser,
+    custody_main,
+    execute_custody_cli,
+)
+
 
 __all__ = [
     # V1
@@ -1143,4 +1265,91 @@ __all__ = [
     "build_dashboard_parser",
     "dashboard_main",
     "execute_dashboard_cli",
+    # V8.1
+    "CUSTODY_LIMITATIONS_DISCLAIMER",
+    "GENESIS_PREV_HASH",
+    "CustodyActionType",
+    "CustodyActor",
+    "CustodyEvent",
+    "TimestampSource",
+    "compute_canonical_event_json",
+    "compute_canonical_event_payload",
+    "compute_event_record_hash",
+    "generate_custody_event_id",
+    "is_valid_custody_event_id",
+    "MANIFEST_SCHEMA_VERSION",
+    "HashAlgorithm",
+    "ManifestArtifactType",
+    "ManifestEntry",
+    "ManifestRecord",
+    "ManifestVerificationStatus",
+    "generate_manifest_id",
+    "is_valid_manifest_id",
+    "validate_relative_entry_path",
+    "ADVANCED_REPORT_SCHEMA_VERSION",
+    "DEFAULT_ANALYTICAL_DISCLAIMER",
+    "AdvancedReport",
+    "AnalyticalLimitations",
+    "CustodySummary",
+    "EvidenceInventoryItem",
+    "FindingsSummary",
+    "generate_advanced_report_id",
+    "is_valid_advanced_report_id",
+    # V8.2
+    "MANIFEST_VERIFICATION_NOTICE",
+    "ManifestEntryVerification",
+    "ManifestVerificationResult",
+    "verify_manifest",
+    # V8.3
+    "CUSTODY_LEDGER_SCHEMA_VERSION",
+    "CustodyChainVerificationResult",
+    "CustodyLedger",
+    "compute_ledger_digest",
+    "generate_custody_ledger_id",
+    "is_valid_custody_ledger_id",
+    # V8.4
+    "build_advanced_report",
+    "render_advanced_report_html",
+    "render_advanced_report_json",
+    "write_advanced_report_html",
+    "write_advanced_report_json",
+    # V8.5
+    "AdvancedTriageConfig",
+    "AdvancedTriageResult",
+    "AdvancedTriageOrchestrator",
+    "run_advanced_triage",
+    "CustodyIntegrityError",
+    "build_advanced_parser",
+    "execute_advanced_cli",
+    "advanced_main",
+    "EXIT_SUCCESS",
+    "EXIT_CONFIG_ERROR",
+    "EXIT_VERIFICATION_DISCREPANCY",
+    "EXIT_CUSTODY_FAILURE",
+    "EXIT_FILESYSTEM_IO_ERROR",
+    # V8.6
+    "ManifestGeneratorConfig",
+    "generate_manifest",
+    "save_manifest",
+    "build_manifest_parser",
+    "execute_manifest_cli",
+    "manifest_main",
+    # V8.7
+    "StaleLedgerError",
+    "CustodyTransferStatus",
+    "CustodyTransferRecord",
+    "CustodyTransferReceipt",
+    "CustodyAuditResult",
+    "AuditFinding",
+    "generate_custody_transfer_id",
+    "is_valid_custody_transfer_id",
+    "generate_custody_receipt_id",
+    "is_valid_custody_receipt_id",
+    "record_transfer",
+    "generate_transfer_receipt",
+    "audit_custody_ledger",
+    "parse_transfer_from_event",
+    "build_custody_parser",
+    "execute_custody_cli",
+    "custody_main",
 ]

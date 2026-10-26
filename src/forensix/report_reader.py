@@ -90,6 +90,7 @@ class ReportType(str, Enum):
     CORRELATION = "correlation"                      # V4 Event correlation
     DETECTION = "detection"                          # V4 Rule detection
     CORRELATION_DETECTION = "correlation_detection"  # V4/V5/V6 Integrated investigation
+    SCHEMA_8_0 = "schema_8_0"                        # Schema 8.0 Advanced Forensic Report
 
 
 def freeze_payload(obj: Any) -> Any:
@@ -311,6 +312,11 @@ class IngestedReport:
         """Check if this report is a V1 single-file evidence analysis report."""
         return self.report_type == ReportType.EVIDENCE_ANALYSIS
 
+    @property
+    def is_schema_8_0(self) -> bool:
+        """Check if this report is a Schema 8.0 advanced forensic report."""
+        return self.report_type == ReportType.SCHEMA_8_0
+
     def raw_dict(self) -> Dict[str, Any]:
         """
         Return a deep, mutable dictionary copy of raw_data.
@@ -441,7 +447,32 @@ def detect_report_schema(data: Any) -> ReportType:
             f"Supported types: {[t.value for t in ReportType]}"
         )
 
-    # 2. V2 Host Triage ForensicReport signature
+    # 2. Schema 8.0 Advanced Forensic Report
+    report_schema = data.get("report_schema")
+    if isinstance(report_schema, str) and report_schema.strip() == "8.0":
+        from forensix.advanced_report_models import is_valid_advanced_report_id
+
+        if "report_id" not in data or not is_valid_advanced_report_id(data["report_id"]):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section report_id.")
+        if "case_metadata" not in data or not isinstance(data["case_metadata"], (dict, Mapping)):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section case_metadata.")
+        if "created_at" not in data or not isinstance(data["created_at"], str) or not data["created_at"].strip():
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section created_at.")
+        if "forensix_version" not in data or not isinstance(data["forensix_version"], str) or not data["forensix_version"].strip():
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section forensix_version.")
+        if "findings_summary" not in data or not isinstance(data["findings_summary"], (dict, Mapping)):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section findings_summary.")
+        if "evidence_inventory" not in data or not isinstance(data["evidence_inventory"], (list, tuple)):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section evidence_inventory.")
+        if "limitations" not in data or not isinstance(data["limitations"], (dict, Mapping)):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section limitations.")
+        if "custody_summary" in data and data["custody_summary"] is not None and not isinstance(data["custody_summary"], (dict, Mapping)):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section custody_summary.")
+        if "details" in data and data["details"] is not None and not isinstance(data["details"], (dict, Mapping)):
+            raise ReportSchemaError("Invalid Schema 8.0 report: missing or invalid section details.")
+        return ReportType.SCHEMA_8_0
+
+    # 3. V2 Host Triage ForensicReport signature
     if (
         "metadata" in data
         and isinstance(data["metadata"], (dict, Mapping))
@@ -666,6 +697,48 @@ def _extract_metadata_and_counts(
         )
         counts = ReportSummaryCounts(
             artifact_count=1,
+        )
+        return metadata, counts, warnings
+
+    elif report_type == ReportType.SCHEMA_8_0:
+        cm = data.get("case_metadata", {})
+        if not isinstance(cm, (dict, Mapping)):
+            cm = {}
+            warnings.append("Report 'case_metadata' section is not a dictionary.")
+
+        case_id = cm.get("case_id")
+        case_name = cm.get("case_name")
+        investigator = cm.get("investigator")
+        evidence_root = cm.get("evidence_root")
+        created_at = data.get("created_at")
+        forensix_version = data.get("forensix_version")
+        report_id = data.get("report_id")
+
+        fs = data.get("findings_summary", {})
+        if not isinstance(fs, (dict, Mapping)):
+            fs = {}
+
+        artifact_count = fs.get("total_host_artifacts", 0) if isinstance(fs.get("total_host_artifacts"), int) else 0
+        event_count = fs.get("total_timeline_events", 0) if isinstance(fs.get("total_timeline_events"), int) else 0
+        correlation_count = fs.get("total_correlations", 0) if isinstance(fs.get("total_correlations"), int) else 0
+        detection_count = fs.get("total_rule_evaluations", 0) if isinstance(fs.get("total_rule_evaluations"), int) else 0
+        matched_detection_count = fs.get("matched_detections", 0) if isinstance(fs.get("matched_detections"), int) else 0
+
+        metadata = CaseMetadataView(
+            case_id=_normalize_string_metadata(case_id),
+            case_name=_normalize_string_metadata(case_name),
+            investigator=_normalize_string_metadata(investigator),
+            created_at=_normalize_string_metadata(created_at),
+            forensix_version=_normalize_string_metadata(forensix_version),
+            evidence_root=_normalize_string_metadata(evidence_root),
+            report_id=_normalize_string_metadata(report_id),
+        )
+        counts = ReportSummaryCounts(
+            artifact_count=artifact_count,
+            event_count=event_count,
+            correlation_count=correlation_count,
+            detection_count=detection_count,
+            matched_detection_count=matched_detection_count,
         )
         return metadata, counts, warnings
 

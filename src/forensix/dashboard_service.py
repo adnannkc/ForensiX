@@ -880,6 +880,9 @@ def extract_report_pivots(
     if "case_id" in meta_dict:
         case_val = meta_dict["case_id"]
         case_path = "metadata.case_id"
+    elif "case_metadata" in raw_data and isinstance(raw_data["case_metadata"], (dict, Mapping)) and "case_id" in raw_data["case_metadata"]:
+        case_val = raw_data["case_metadata"]["case_id"]
+        case_path = "case_metadata.case_id"
     elif "case_id" in raw_data:
         case_val = raw_data["case_id"]
         case_path = "case_id"
@@ -1158,6 +1161,57 @@ def extract_report_pivots(
         _extract_detections_pivots(raw_data.get("detections"), "detections", report, report_id, evidence_scope, pivots)
         _extract_correlations_pivots(raw_data.get("correlations"), "correlations", report, report_id, evidence_scope, pivots)
         _extract_timeline_events_pivots(raw_data.get("timeline_events"), "timeline_events", report, report_id, evidence_scope, pivots)
+
+    elif report.report_type == ReportType.SCHEMA_8_0:
+        # evidence_inventory
+        inv = raw_data.get("evidence_inventory")
+        if isinstance(inv, (list, tuple)):
+            for i, item in enumerate(inv):
+                if not isinstance(item, (dict, Mapping)):
+                    continue
+                item_scope = item.get("evidence_id") if isinstance(item.get("evidence_id"), str) else evidence_scope
+                # ARTIFACT_ID: evidence_inventory[].evidence_id
+                ev_id = item.get("evidence_id")
+                if isinstance(ev_id, str) and ev_id.strip():
+                    pivots.append(
+                        PivotReference(
+                            report_id=report_id,
+                            report_type=report.report_type,
+                            field_type=PivotFieldType.ARTIFACT_ID,
+                            field_path=f"evidence_inventory[{i}].evidence_id",
+                            observed_value=ev_id,
+                            normalized_value=ev_id.strip(),
+                            identifier_kind=IDENTIFIER_KIND_EVIDENCE_ID,
+                            timestamp=item.get("registration_timestamp"),
+                            evidence_scope=item.get("relative_path") or item_scope,
+                            context={"id_type": IDENTIFIER_KIND_EVIDENCE_ID, "relative_path": item.get("relative_path")},
+                        )
+                    )
+                # SHA256 (file evidence only): hashes["sha256"] when valid 64-char hex string
+                hashes = item.get("hashes")
+                if isinstance(hashes, (dict, Mapping)):
+                    sha_val = hashes.get("sha256")
+                    norm_sha = normalize_sha256(sha_val)
+                    if norm_sha:
+                        pivots.append(
+                            PivotReference(
+                                report_id=report_id,
+                                report_type=report.report_type,
+                                field_type=PivotFieldType.SHA256,
+                                field_path=f"evidence_inventory[{i}].hashes.sha256",
+                                observed_value=sha_val,
+                                normalized_value=norm_sha,
+                                timestamp=item.get("registration_timestamp"),
+                                evidence_scope=item_scope,
+                                context={"relative_path": item.get("relative_path"), "size_bytes": item.get("size_bytes")},
+                            )
+                        )
+
+        # details: detections and correlations
+        details = raw_data.get("details")
+        if isinstance(details, (dict, Mapping)):
+            _extract_detections_pivots(details.get("detections"), "details.detections", report, report_id, evidence_scope, pivots)
+            _extract_correlations_pivots(details.get("correlations"), "details.correlations", report, report_id, evidence_scope, pivots)
 
     # Deterministic deduplication of references with the exact same (field_type, normalized_value, identifier_kind, field_path)
     deduped: List[PivotReference] = []

@@ -1189,6 +1189,33 @@ class TestReportReader(unittest.TestCase):
         self.assertTrue(ingested.metadata.report_id.startswith("REPORT-"))
         self.assertEqual(ingested.counts.artifact_count, 1)
 
+    def test_26_read_schema_8_0_advanced_report(self) -> None:
+        """Verify reading a real Schema 8.0 report and asserting report_type is SCHEMA_8_0."""
+        real_report_path = Path("docs/examples/case-synthetic/report_CASE-2026-SYNTHETIC-001.json")
+        self.assertTrue(real_report_path.exists())
+        ingested = read_report(real_report_path)
+        self.assertEqual(ingested.report_type, ReportType.SCHEMA_8_0)
+        self.assertTrue(ingested.is_schema_8_0)
+        self.assertEqual(ingested.metadata.case_id, "CASE-2026-SYNTHETIC-001")
+        self.assertEqual(ingested.metadata.case_name, "Synthetic Multi-Domain Forensic Investigation")
+        self.assertEqual(ingested.metadata.investigator, "Chief Digital Forensics Examiner")
+        self.assertEqual(ingested.counts.detection_count, 7)
+        self.assertEqual(ingested.counts.matched_detection_count, 7)
+
+    def test_schema_8_0_missing_required_keys_rejected(self) -> None:
+        """Verify report with 8.0 marker but missing a required section raises ReportSchemaError."""
+        real_report_path = Path("docs/examples/case-synthetic/report_CASE-2026-SYNTHETIC-001.json")
+        with open(real_report_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Remove a required section: case_metadata
+        del data["case_metadata"]
+        bad_report = self._write_json("missing_case_metadata_8_0.json", data)
+        with self.assertRaises(ReportSchemaError) as ctx:
+            read_report(bad_report)
+        self.assertIn("Invalid Schema 8.0 report", str(ctx.exception))
+        self.assertIn("case_metadata", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

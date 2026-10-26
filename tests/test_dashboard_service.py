@@ -360,7 +360,7 @@ class TestDashboardService(unittest.TestCase):
         self.assertEqual(len(registry), 6)
         reports = registry.list_reports()
         types_registered = {r["report_type"] for r in reports}
-        expected_types = {t.value for t in ReportType}
+        expected_types = {t.value for t in ReportType if t != ReportType.SCHEMA_8_0}
         self.assertEqual(types_registered, expected_types)
 
     # =========================================================================
@@ -4826,6 +4826,67 @@ class TestDashboardHostValidationAndHardening(unittest.TestCase):
         # Subsequent stop is an idempotent no-op
         server.stop()
         self.assertTrue(server._is_stopped)
+
+    def test_schema_8_0_ingested_in_registry(self) -> None:
+        """Verify a Schema 8.0 report is ingested into registry and not skipped."""
+        real_report = Path("docs/examples/case-synthetic/report_CASE-2026-SYNTHETIC-001.json")
+        self.assertTrue(real_report.exists())
+        registry = DashboardReportRegistry()
+        rep_id = registry.register_file(real_report)
+        self.assertIsNotNone(rep_id)
+        self.assertEqual(len(registry.list_reports()), 1)
+        self.assertEqual(len(registry.skipped_reports), 0)
+
+    def test_schema_8_0_pivot_extraction_case_and_sha256(self) -> None:
+        """Verify Schema 8.0 report produces case_id and at least one sha256 pivot."""
+        real_report = Path("docs/examples/case-synthetic/report_CASE-2026-SYNTHETIC-001.json")
+        with open(real_report, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["evidence_inventory"] = [
+            {
+                "evidence_id": "EV-100",
+                "relative_path": "var/log/auth.log",
+                "size_bytes": 1024,
+                "hashes": {"sha256": "4402a77918a55e2d1d3a54d52fecefe3b86e088fef27b4b1a29c9a622f6fa754"},
+                "registration_timestamp": "2026-10-21T07:12:00Z",
+            }
+        ]
+        rep_file = self.temp_dir / "rep_with_sha.json"
+        rep_file.write_text(json.dumps(data), encoding="utf-8")
+
+        registry = DashboardReportRegistry()
+        rep_id = registry.register_file(rep_file)
+
+        res_case = registry.query_pivots(PivotFieldType.CASE_ID, "CASE-2026-SYNTHETIC-001")
+        self.assertGreaterEqual(res_case.total_matches, 1)
+
+        res_sha = registry.query_pivots(PivotFieldType.SHA256, "4402a77918a55e2d1d3a54d52fecefe3b86e088fef27b4b1a29c9a622f6fa754")
+        self.assertGreaterEqual(res_sha.total_matches, 1)
+
+    def test_schema_8_0_ledger_terminal_hash_not_sha256_pivot(self) -> None:
+        """Verify custody_summary.terminal_hash is NOT indexed as a sha256 pivot."""
+        real_report = Path("docs/examples/case-synthetic/report_CASE-2026-SYNTHETIC-001.json")
+        with open(real_report, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        terminal_hash = data["custody_summary"]["terminal_hash"]
+
+        registry = DashboardReportRegistry()
+        rep_id = registry.register_file(real_report)
+
+        res_ledger_sha = registry.query_pivots(PivotFieldType.SHA256, terminal_hash)
+        self.assertEqual(res_ledger_sha.total_matches, 0)
+
+    def test_unknown_schema_file_is_skipped_with_sanitized_reason(self) -> None:
+        """Verify unknown schema JSON file in directory ingestion is skipped with sanitized reason."""
+        unknown_file = self.temp_dir / "unknown_schema_report.json"
+        unknown_file.write_text(json.dumps({"arbitrary_field": 12345}), encoding="utf-8")
+
+        registry = DashboardReportRegistry()
+        registry.register_directory(self.temp_dir)
+        skipped = registry.skipped_reports
+        self.assertEqual(len(skipped), 1)
+        self.assertEqual(skipped[0]["filename"], "unknown_schema_report.json")
+        self.assertEqual(skipped[0]["reason"], "Unrecognized or unsupported ForensiX report schema.")
 
 
 if __name__ == "__main__":

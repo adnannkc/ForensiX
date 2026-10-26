@@ -783,6 +783,11 @@ from forensix.pipeline_cli import (
     execute_pipeline_cli,
     pipeline_main,
 )
+from forensix.case_cli import (
+    build_case_parser,
+    case_main,
+    execute_case_cli,
+)
 
 
 __all__ = [
@@ -1403,5 +1408,8 @@ __all__ = [
     "build_pipeline_parser",
     "execute_pipeline_cli",
     "pipeline_main",
+    "build_case_parser",
+    "execute_case_cli",
+    "case_main",
 ]
 

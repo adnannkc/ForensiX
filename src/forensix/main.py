@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="ForensiX - Automated Digital Forensics & Incident Triage Platform (V1)",
         epilog=(
             "Analyzes evidence files in binary read-only mode and writes JSON reports to reports/.\n"
+            "For controlled investigation pipeline and case runner, use: python3 -m forensix case --help\n"
             "For controlled multi-domain investigation pipeline (V9), use: python3 -m forensix run --help\n"
             "For automated multi-stage incident triage, use: python3 -m forensix triage --help\n"
             "For timeline reconstruction and querying, use: python3 -m forensix timeline --help\n"
@@ -331,6 +332,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         int: 0 on success, non-zero on failure.
     """
     raw_args = list(sys.argv[1:] if argv is None else argv)
+    if raw_args and raw_args[0] == "case":
+        from forensix.case_cli import case_main
+        return case_main(raw_args[1:])
     if raw_args and raw_args[0] in ("run", "pipeline"):
         from forensix.pipeline_cli import pipeline_main
         return pipeline_main(raw_args[1:])

@@ -23,6 +23,7 @@ from forensix.dashboard_cli import execute_dashboard_cli
 from forensix.dashboard_service import ALLOWED_LOOPBACK_HOSTS
 from forensix.pipeline_cli import (
     build_pipeline_parser,
+    print_pipeline_findings,
     print_pipeline_summary,
 )
 from forensix.pipeline_engine import (
@@ -219,6 +220,8 @@ def execute_case_cli(
 
     # 3. Render summary
     print_pipeline_summary(result)
+    if args.show_findings:
+        print_pipeline_findings(result)
 
     # 4. Handle exit code and optional dashboard serving
     if result.exit_code == 1:

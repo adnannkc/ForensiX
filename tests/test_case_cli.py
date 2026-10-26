@@ -236,6 +236,22 @@ class TestCaseCLI(unittest.TestCase):
         for item in registry.skipped_reports:
             self.assertTrue(len(str(item["reason"])) > 0)
 
+    def test_case_show_findings_forwarded(self):
+        """Verify forensix case --show-findings prints the findings block."""
+        out_dir = self.base_dir / "reports_case_findings"
+        stdout_buf = io.StringIO()
+        with patch("sys.stdout", stdout_buf):
+            exit_code = case_main([
+                "--config", str(self.synth_case_config),
+                "-o", str(out_dir),
+                "--overwrite",
+                "--show-findings",
+            ])
+        self.assertEqual(exit_code, 0)
+        output = stdout_buf.getvalue()
+        self.assertIn("ForensiX - What was found", output)
+        self.assertIn("Matches are observations to review, not conclusions about compromise.", output)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,8 @@ across Host, Network, and Memory evidence with Schema 8.0 reporting and custody 
 """
 
 import argparse
+from collections.abc import Mapping
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 import time
@@ -174,6 +176,12 @@ def build_pipeline_parser() -> argparse.ArgumentParser:
         help="Enable detailed diagnostic messages during execution.",
     )
     parser.add_argument(
+        "--show-findings",
+        action="store_true",
+        default=False,
+        help="Print detailed observed rule matches in the terminal following the execution summary.",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"ForensiX {__version__}",
@@ -235,6 +243,147 @@ def print_pipeline_summary(result: PipelineExecutionResult) -> None:
     print("=" * 78)
     print(f"Final Exit Code : {result.exit_code} (Status: {manifest.run_status})")
     print("=" * 78 + "\n")
+
+
+def _parse_iso_timestamp(ts: Optional[str]) -> Optional[datetime]:
+    """Parse an ISO-8601 timestamp string into a timezone-aware UTC datetime."""
+    if not ts:
+        return None
+    clean = str(ts).strip()
+    if clean.endswith("Z"):
+        clean = clean[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(clean)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _format_dt(dt: datetime) -> str:
+    """Format datetime as YYYY-MM-DD HH:MM:SS with microseconds truncated."""
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def print_pipeline_findings(result: PipelineExecutionResult) -> None:
+    """Render observed rule matches to the terminal when --show-findings is enabled."""
+    if result.report is None:
+        print("No report findings were generated for this run.")
+        return
+
+    details = result.report.details if isinstance(result.report.details, Mapping) else {}
+    detections = details.get("detections", [])
+    matched_dets = [d for d in detections if d.get("matched", True)]
+
+    # Group matches by rule_name in order of first appearance
+    grouped: dict = {}
+    for d in matched_dets:
+        r_name = d.get("rule_name") or "Unknown Rule"
+        grouped.setdefault(r_name, []).append(d)
+
+    total_rules = len(grouped)
+    total_matches = len(matched_dets)
+
+    # Derived overall timeline range: timeline_events if present, otherwise detections start/end
+    timeline_events = details.get("timeline_events", [])
+    collected_dts = []
+    if timeline_events:
+        for ev in timeline_events:
+            ts = ev.get("timestamp")
+            parsed = _parse_iso_timestamp(ts)
+            if parsed is not None:
+                collected_dts.append(parsed)
+    else:
+        for d in matched_dets:
+            for k in ("start_timestamp", "end_timestamp"):
+                ts = d.get(k)
+                parsed = _parse_iso_timestamp(ts)
+                if parsed is not None:
+                    collected_dts.append(parsed)
+
+    if collected_dts:
+        earliest_dt = min(collected_dts)
+        latest_dt = max(collected_dts)
+        matched_range_str = f"{_format_dt(earliest_dt)} to {_format_dt(latest_dt)} UTC"
+    else:
+        matched_range_str = "None observed"
+
+    border = "  " + "=" * 69
+    print("\n" + border)
+    print("  ForensiX - What was found")
+    print(border)
+    print("  Times are shown to the second. Full precision is kept in the JSON report.")
+    manifest = result.run_manifest
+    if manifest:
+        print(f"  Case      : {manifest.case_id or 'UNSPECIFIED'}")
+        print(f"  Status    : {manifest.run_status}")
+    print()
+
+    kind_noun = "kind" if total_rules == 1 else "kinds"
+    match_noun = "time" if total_matches == 1 else "times"
+    print(f"  {total_rules} {kind_noun} of pattern matched, {total_matches} {match_noun} in total.\n")
+
+    if not grouped:
+        print("  No rule matches observed.\n")
+    else:
+        displayed_rules = list(grouped.items())[:25]
+        for idx, (rule_name, matches) in enumerate(displayed_rules, start=1):
+            count = len(matches)
+            rule_time_str = "time" if count == 1 else "times"
+
+            parsed_dts = []
+            unparsed_count = 0
+            for m in matches:
+                raw_ts = m.get("start_timestamp")
+                parsed = _parse_iso_timestamp(raw_ts)
+                if parsed is not None:
+                    parsed_dts.append(parsed)
+                else:
+                    unparsed_count += 1
+
+            if parsed_dts:
+                start_dt = min(parsed_dts)
+                end_dt = max(parsed_dts)
+                if start_dt == end_dt:
+                    time_line = f"     At {_format_dt(start_dt)} UTC."
+                else:
+                    time_line = f"     Between {_format_dt(start_dt)} and {_format_dt(end_dt)} UTC."
+            else:
+                time_line = "     Time: None recorded"
+
+            explanation = ""
+            for m in matches:
+                if m.get("explanation"):
+                    explanation = str(m["explanation"])
+                    break
+
+            print(f"  {idx}. {rule_name} ({count} {rule_time_str})")
+            print(time_line)
+            if explanation:
+                print(f"     {explanation}")
+            print()
+
+        if total_rules > 25:
+            remaining = total_rules - 25
+            print(f"  ... and {remaining} more kinds not shown. See the report for the full list.\n")
+
+    print(f"  Matched range: {matched_range_str}\n")
+
+    html_path = None
+    json_path = None
+    for p in result.output_files:
+        p_str = str(p)
+        if p_str.endswith(".html"):
+            html_path = p_str
+        elif p_str.endswith(".json") and "report" in Path(p_str).name:
+            json_path = p_str
+
+    print("  Where to look next")
+    print(f"     HTML report : {html_path or 'Not generated'}")
+    print(f"     JSON report : {json_path or 'Not generated'}\n")
+    print("  Matches are observations to review, not conclusions about compromise.")
+    print(border + "\n")
 
 
 def execute_pipeline_cli(argv: Optional[Sequence[str]] = None) -> int:
@@ -340,6 +489,8 @@ def execute_pipeline_cli(argv: Optional[Sequence[str]] = None) -> int:
 
     # 3. Render summary
     print_pipeline_summary(result)
+    if args.show_findings:
+        print_pipeline_findings(result)
 
     return result.exit_code
 

@@ -1,14 +1,20 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyc
+.pytest_cache/
 .venv/
 venv/
+build/
+dist/
 
 # Forensic evidence
+evidence/
 evidence/*
 !evidence/.gitkeep
 
 # Generated reports
+reports/
 reports/*
 !reports/.gitkeep
 

@@ -190,10 +190,10 @@ class TestArtifactAdapters(unittest.TestCase):
         evt_created = events[0]
         self.assertEqual(evt_created.category, TimelineCategory.FILESYSTEM)
         self.assertEqual(evt_created.event_type, "file_created")
-        self.assertEqual(evt_created.description, "File created: /evidence/target/etc/passwd")
+        self.assertEqual(evt_created.description, "File created: etc/passwd")
         self.assertEqual(evt_created.timestamp, datetime(2026, 9, 29, 8, 0, 0, tzinfo=timezone.utc))
         self.assertEqual(evt_created.raw_timestamp, "2026-09-29T08:00:00Z")
-        self.assertEqual(evt_created.source_path, "/evidence/target/etc/passwd")
+        self.assertEqual(evt_created.source_path, "etc/passwd")
         expected_v3_id = compute_deterministic_artifact_id(
             path=self.sample_art_record.source_path,
             relative_path=self.sample_art_record.relative_path,
@@ -209,16 +209,16 @@ class TestArtifactAdapters(unittest.TestCase):
         evt_modified = events[1]
         self.assertEqual(evt_modified.category, TimelineCategory.FILESYSTEM)
         self.assertEqual(evt_modified.event_type, "file_modified")
-        self.assertEqual(evt_modified.description, "File modified: /evidence/target/etc/passwd")
+        self.assertEqual(evt_modified.description, "File modified: etc/passwd")
         self.assertEqual(evt_modified.timestamp, datetime(2026, 9, 30, 9, 0, 0, tzinfo=timezone.utc))
         self.assertEqual(evt_modified.raw_timestamp, "2026-09-30T14:30:00+05:30")
-        self.assertEqual(evt_modified.source_path, "/evidence/target/etc/passwd")
+        self.assertEqual(evt_modified.source_path, "etc/passwd")
 
         # 3. file_accessed
         evt_accessed = events[2]
         self.assertEqual(evt_accessed.category, TimelineCategory.FILESYSTEM)
         self.assertEqual(evt_accessed.event_type, "file_accessed")
-        self.assertEqual(evt_accessed.description, "File accessed: /evidence/target/etc/passwd")
+        self.assertEqual(evt_accessed.description, "File accessed: etc/passwd")
         self.assertEqual(evt_accessed.timestamp, datetime(2026, 9, 30, 10, 0, 0, tzinfo=timezone.utc))
         self.assertEqual(evt_accessed.raw_timestamp, "2026-09-30T10:00:00Z")
 

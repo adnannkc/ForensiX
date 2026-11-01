@@ -722,7 +722,11 @@
     // 2. Tab Content Rendering
     renderMetadataTab(report);
     renderSummaryTab(report);
-    renderRawTab(state.activeReportDetails ? state.activeReportDetails.raw_data : null);
+    const rawData = state.activeReportDetails ? state.activeReportDetails.raw_data : null;
+    renderRawTab(rawData);
+    renderTimelineTab(rawData);
+    renderNetworkTab(rawData);
+    renderUsersTab(rawData);
 
     // Activate current tab
     switchTab(state.activeTab || "tab-metadata");
@@ -929,6 +933,206 @@
     container.appendChild(tree);
   }
 
+  // ---------------------------------------------------------------------------
+  // Domain Tabs: Timeline, Network, Users / Accounts
+  // ---------------------------------------------------------------------------
+  function renderDomainEmptyState(container, explanationText) {
+    clearNode(container);
+    const box = el("div", "state-container empty-box");
+    const icon = el("div", "state-icon empty-icon", "📋");
+    const title = el("h3", "state-title", "No Domain Records Available");
+    const desc = el("p", "state-subtitle domain-empty-explanation", explanationText);
+    box.appendChild(icon);
+    box.appendChild(title);
+    box.appendChild(desc);
+    container.appendChild(box);
+  }
+
+  function renderDomainTable(container, cardTitle, badgeText, subtitleText, columns, rowsData, totalCount) {
+    clearNode(container);
+
+    const card = el("div", "panel-card");
+    const headerRow = el("div", "panel-header-row");
+    const title = el("h3", "panel-title", cardTitle);
+    const badge = el("span", "badge", badgeText);
+    headerRow.appendChild(title);
+    headerRow.appendChild(badge);
+    card.appendChild(headerRow);
+
+    const subtitle = el("p", "panel-subtitle", subtitleText);
+    card.appendChild(subtitle);
+
+    if (totalCount > 100) {
+      const notice = el("div", "domain-notice-banner alert-banner alert-info", "Showing first 100 of " + totalCount);
+      card.appendChild(notice);
+    }
+
+    const tableWrapper = el("div", "table-responsive");
+    const table = el("table", "domain-table data-table");
+    const thead = el("thead");
+    const headerTr = el("tr");
+    columns.forEach(function (colName) {
+      headerTr.appendChild(el("th", null, colName));
+    });
+    thead.appendChild(headerTr);
+    table.appendChild(thead);
+
+    const tbody = el("tbody");
+    const displayRows = rowsData.slice(0, 100);
+    displayRows.forEach(function (rowCells) {
+      const tr = el("tr");
+      rowCells.forEach(function (cellVal) {
+        tr.appendChild(el("td", null, cellVal !== null && cellVal !== undefined ? cellVal : "—"));
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tableWrapper.appendChild(table);
+    card.appendChild(tableWrapper);
+
+    container.appendChild(card);
+  }
+
+  function renderTimelineTab(rawData) {
+    const container = document.getElementById("tab-timeline");
+    if (!container) return;
+
+    const events = rawData && Array.isArray(rawData.events) ? rawData.events : null;
+    if (!events || events.length === 0) {
+      renderDomainEmptyState(
+        container,
+        "This report type has no timeline list. Open a V3 timeline report to see events."
+      );
+      return;
+    }
+
+    const columns = ["Timestamp (UTC)", "Event Type", "Description", "Source Path", "Event ID"];
+    const rows = events.map(function (ev) {
+      return [
+        ev && ev.timestamp ? ev.timestamp : "—",
+        ev && ev.event_type ? ev.event_type : "—",
+        ev && ev.description ? ev.description : "—",
+        ev && ev.source_path ? ev.source_path : "—",
+        ev && ev.event_id ? ev.event_id : "—",
+      ];
+    });
+
+    renderDomainTable(
+      container,
+      "Chronological Timeline Events",
+      events.length + (events.length === 1 ? " Event" : " Events"),
+      "Sequential host and network timeline records reconstructed from verified evidence.",
+      columns,
+      rows,
+      events.length
+    );
+  }
+
+  function renderNetworkTab(rawData) {
+    const container = document.getElementById("tab-network");
+    if (!container) return;
+
+    const timelineEvents = rawData && Array.isArray(rawData.timeline_events) ? rawData.timeline_events : null;
+    const netEvents = timelineEvents
+      ? timelineEvents.filter(function (ev) {
+          return ev && String(ev.category || "").toLowerCase() === "network";
+        })
+      : [];
+
+    if (netEvents.length === 0) {
+      renderDomainEmptyState(
+        container,
+        "This report type has no network list. Open a network report to see communications."
+      );
+      return;
+    }
+
+    const columns = [
+      "Timestamp (UTC)",
+      "Event Type",
+      "Description",
+      "Source IP:Port",
+      "Destination IP:Port",
+      "Protocol",
+    ];
+
+    const rows = netEvents.map(function (ev) {
+      const attrs = (ev && ev.attributes) || {};
+      const src = attrs.src_ip
+        ? attrs.src_port
+          ? attrs.src_ip + ":" + attrs.src_port
+          : attrs.src_ip
+        : "—";
+      const dst = attrs.dst_ip
+        ? attrs.dst_port
+          ? attrs.dst_ip + ":" + attrs.dst_port
+          : attrs.dst_ip
+        : "—";
+      const proto = attrs.protocol || attrs.network_protocol || "—";
+
+      return [
+        ev && ev.timestamp ? ev.timestamp : "—",
+        ev && ev.event_type ? ev.event_type : "—",
+        ev && ev.description ? ev.description : "—",
+        src,
+        dst,
+        proto,
+      ];
+    });
+
+    renderDomainTable(
+      container,
+      "Observed Network Communications",
+      netEvents.length + (netEvents.length === 1 ? " Packet" : " Packets"),
+      "Extracted network packet events and connection records.",
+      columns,
+      rows,
+      netEvents.length
+    );
+  }
+
+  function renderUsersTab(rawData) {
+    const container = document.getElementById("tab-users");
+    if (!container) return;
+
+    const artifacts = rawData && Array.isArray(rawData.artifacts) ? rawData.artifacts : null;
+    const accounts = artifacts
+      ? artifacts.filter(function (art) {
+          return art && String(art.category || "").toLowerCase() === "account";
+        })
+      : [];
+
+    if (accounts.length === 0) {
+      renderDomainEmptyState(
+        container,
+        "This report type has no account list. Open a V2 triage report to see user accounts."
+      );
+      return;
+    }
+
+    const columns = ["Username", "UID", "GID", "Home Directory", "Login Shell"];
+    const rows = accounts.map(function (art) {
+      const payload = (art && art.specialized_payload) || art || {};
+      return [
+        payload.username !== undefined && payload.username !== null ? String(payload.username) : "—",
+        payload.uid !== undefined && payload.uid !== null ? String(payload.uid) : "—",
+        payload.gid !== undefined && payload.gid !== null ? String(payload.gid) : "—",
+        payload.home_directory || "—",
+        payload.login_shell || "—",
+      ];
+    });
+
+    renderDomainTable(
+      container,
+      "Observed User Accounts",
+      accounts.length + (accounts.length === 1 ? " Account" : " Accounts"),
+      "Defensive user account artifacts, group memberships, and shell configurations.",
+      columns,
+      rows,
+      accounts.length
+    );
+  }
+
   function switchTab(tabId) {
     state.activeTab = tabId;
     const tabBtns = document.querySelectorAll(".tab-btn");
@@ -940,7 +1144,14 @@
       }
     });
 
-    const panels = ["tab-metadata", "tab-summary", "tab-raw"];
+    const panels = [
+      "tab-metadata",
+      "tab-summary",
+      "tab-raw",
+      "tab-timeline",
+      "tab-network",
+      "tab-users",
+    ];
     panels.forEach(function (pid) {
       const p = document.getElementById(pid);
       if (p) {

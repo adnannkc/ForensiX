@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 9.1.0
 
 - Fixed: authentication and log timeline events use evidence-relative source_path (no analyst home directory in output).
 - Changed: timeline --source-path expects evidence-relative paths; absolute-path filters return no results.

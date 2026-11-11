@@ -45,22 +45,28 @@ The last command should print `ForensiX 9.0.0`.
 ForensiX includes a small made-up case so you can try it safely:
 
 ```bash
-forensix run --config examples/case-synthetic/case.json -o reports/ --overwrite
-ls reports/
+forensix case --config examples/case-synthetic/case.json -o reports/ --overwrite --show-findings
 ```
 
-The `reports/` folder will contain:
-
-- a JSON report and an HTML report you can open in a browser
-- a custody ledger, which records what happened to the evidence
-- `pipeline_manifest.json`, a machine-readable record of each step
+The results are in `reports/` with the HTML report and the JSON report. The folder also contains a custody ledger and `pipeline_manifest.json`.
 
 Sample outputs from this case are in `docs/examples/case-synthetic/`.
+
+### Showing findings in the terminal
+
+The `--show-findings` flag prints a summary of observed rule matches in the terminal after the run finishes. It shows what patterns matched, their timestamps to the second, and links to the full reports.
+
+Matches are observations to review, not conclusions about compromise.
+
+### Dashboard
+
+`forensix case --serve` opens the local dashboard on 127.0.0.1 after the run, and Ctrl+C stops it.
 
 ## Commands
 
 | Command | What it does | Version |
 |---|---|---|
+| `forensix case` | Runs the whole investigation from one case file and can serve the dashboard | V9 |
 | `forensix run` | Runs the whole investigation from one case file | V9 |
 | `forensix triage` | Checks a Linux evidence folder | V2 |
 | `forensix timeline` | Builds a time-ordered timeline you can filter | V3 |

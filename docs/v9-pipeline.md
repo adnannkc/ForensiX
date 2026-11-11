@@ -150,19 +150,19 @@ The run manifest is saved as strictly `pipeline_manifest.json` in the root of th
   "generated_files": [
     {
       "relative_path": "report_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "47e79fede1f1c8f1a7201c648d600f819b76b66685cc0ec8e23ec07efbc5d3d6",
+      "sha256": "7a5c666e2fe86c1939d205e4881e46d1b361ac621f6730c73ac4a8923b58980b",
       "size_bytes": 9796,
       "file_type": "advanced_report_json"
     },
     {
       "relative_path": "report_CASE-2026-SYNTHETIC-001.html",
-      "sha256": "842391502c65101b879449fa36e009634e6a02adec1ee64ad1ce92b74303b198",
+      "sha256": "58c90cf12687b1d3b1deb340a7ca7b9fba98b1dcd56f304908be04cc0214e29f",
       "size_bytes": 20316,
       "file_type": "advanced_report_html"
     },
     {
       "relative_path": "ledger_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "6bcd05ea5b09b774a27dcfba25136b3d14698d46b8ad51ea0d813d33d81231cd",
+      "sha256": "b17ddf30bfde2573dad7ef12a16710feda083348f0c655d49cb66f92926aeebc",
       "size_bytes": 4943,
       "file_type": "custody_ledger_json"
     }
@@ -229,11 +229,11 @@ Stage Execution Summary:
 ------------------------------------------------------------------------------
 Generated Artifacts & Cryptographic Digests:
   • report_CASE-2026-SYNTHETIC-001.json  (9.6 KB, advanced_report_json)
-    SHA-256: 47e79fede1f1c8f1a7201c648d600f819b76b66685cc0ec8e23ec07efbc5d3d6
+    SHA-256: 7a5c666e2fe86c1939d205e4881e46d1b361ac621f6730c73ac4a8923b58980b
   • report_CASE-2026-SYNTHETIC-001.html  (19.8 KB, advanced_report_html)
-    SHA-256: 842391502c65101b879449fa36e009634e6a02adec1ee64ad1ce92b74303b198
+    SHA-256: 58c90cf12687b1d3b1deb340a7ca7b9fba98b1dcd56f304908be04cc0214e29f
   • ledger_CASE-2026-SYNTHETIC-001.json  (4.8 KB, custody_ledger_json)
-    SHA-256: 6bcd05ea5b09b774a27dcfba25136b3d14698d46b8ad51ea0d813d33d81231cd
+    SHA-256: b17ddf30bfde2573dad7ef12a16710feda083348f0c655d49cb66f92926aeebc
 ==============================================================================
 Final Exit Code : 0 (Status: SUCCESS)
 ==============================================================================

@@ -5,8 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "forensix"
 version = "9.0.0"
-description = "Automated Digital Forensics and Incident Triage Platform"
+description = "Python-based digital forensics and incident-triage tool for Linux evidence, with a controlled multi-stage pipeline."
+readme = "README.md"
 requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: System :: Logging",
+]
+
+[project.urls]
+Repository = "https://github.com/adnannkc/ForensiX"
+Issues = "https://github.com/adnannkc/ForensiX/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

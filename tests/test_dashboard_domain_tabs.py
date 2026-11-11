@@ -15,11 +15,15 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Dict
 import unittest
 
+from forensix.case_cli import execute_case_cli
 from forensix.dashboard_service import DashboardReportRegistry
+from forensix.main import execute_triage_cli
+from forensix.timeline_cli import execute_timeline_cli
 
 
 class TestDashboardDomainTabs(unittest.TestCase):
@@ -28,10 +32,13 @@ class TestDashboardDomainTabs(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.node_bin = shutil.which("node")
-        cls.ui_dir = Path(__file__).resolve().parent.parent / "src" / "forensix" / "ui"
+        cls.repo_root = Path(__file__).resolve().parent.parent
+        cls.ui_dir = cls.repo_root / "src" / "forensix" / "ui"
         cls.html_path = cls.ui_dir / "index.html"
         cls.js_path = cls.ui_dir / "dashboard.js"
         cls.css_path = cls.ui_dir / "dashboard.css"
+        cls.evidence_host = cls.repo_root / "examples" / "case-synthetic" / "evidence_host"
+        cls.case_json = cls.repo_root / "examples" / "case-synthetic" / "case.json"
 
     def setUp(self) -> None:
         self.html_text = self.html_path.read_text(encoding="utf-8")
@@ -215,20 +222,22 @@ const hooks = sandbox.window.__tabHooks;
         self.assertTrue('id="tab-btn-timeline"' in self.html_text, "Missing id=tab-btn-timeline in index.html")
         self.assertTrue('id="tab-timeline"' in self.html_text, "Missing id=tab-timeline in index.html")
 
-        v3_timeline_path = Path("/tmp/tabs_v3/timeline.json")
-        if not v3_timeline_path.exists():
-            self.skipTest(f"V3 timeline report not found at {v3_timeline_path}")
+        with tempfile.TemporaryDirectory() as td:
+            v3_timeline_path = Path(td) / "timeline.json"
+            ret, _ = execute_timeline_cli([str(self.evidence_host), "--format", "json", "-o", str(v3_timeline_path)])
+            self.assertEqual(ret, 0)
+            self.assertTrue(v3_timeline_path.exists())
 
-        registry = DashboardReportRegistry()
-        rep_id = registry.register_file(v3_timeline_path)
-        details = registry.get_report_details(rep_id)
-        self.assertIsNotNone(details)
-        raw_data = details["raw_data"]
-        self.assertIn("events", raw_data)
-        self.assertGreater(len(raw_data["events"]), 0)
+            registry = DashboardReportRegistry()
+            rep_id = registry.register_file(v3_timeline_path)
+            details = registry.get_report_details(rep_id)
+            self.assertIsNotNone(details)
+            raw_data = details["raw_data"]
+            self.assertIn("events", raw_data)
+            self.assertGreater(len(raw_data["events"]), 0)
 
-        # Execute renderTimelineTab through Node.js test harness
-        script = f"""
+            # Execute renderTimelineTab through Node.js test harness
+            script = f"""
 const rawData = {json.dumps(raw_data)};
 if (!hooks.renderTimelineTab) {{
   throw new Error("renderTimelineTab function is not defined in dashboard.js");
@@ -249,12 +258,12 @@ console.log(JSON.stringify({{
   panelText: panel.textContent
 }}));
 """
-        res = self._run_node_evaluation(script)
-        self.assertGreater(res["rowCount"], 0)
-        # Verify first row contains timestamp and event type
-        first_row = res["firstRow"]
-        self.assertTrue(any("T" in col and "Z" in col for col in first_row), f"No ISO timestamp in row: {first_row}")
-        self.assertTrue(len(first_row) >= 2, "Row must have multiple domain fields")
+            res = self._run_node_evaluation(script)
+            self.assertGreater(res["rowCount"], 0)
+            # Verify first row contains timestamp and event type
+            first_row = res["firstRow"]
+            self.assertTrue(any("T" in col and "Z" in col for col in first_row), f"No ISO timestamp in row: {first_row}")
+            self.assertTrue(len(first_row) >= 2, "Row must have multiple domain fields")
 
     def test_network_tab_shows_only_network_category(self) -> None:
         """Ingest network report, assert only category == 'network' rows appear."""
@@ -337,14 +346,17 @@ console.log(JSON.stringify({{
         self.assertTrue('id="tab-btn-users"' in self.html_text, "Missing id=tab-btn-users in index.html")
         self.assertTrue('id="tab-users"' in self.html_text, "Missing id=tab-users in index.html")
 
-        triage_path = Path("/tmp/tabs_v2/forensix_report_TABS-V2.json")
-        if not triage_path.exists():
-            self.skipTest(f"V2 triage report not found at {triage_path}")
+        with tempfile.TemporaryDirectory() as td:
+            ret, _ = execute_triage_cli([str(self.evidence_host), "-o", str(td), "--format", "json"])
+            self.assertEqual(ret, 0)
+            triage_files = list(Path(td).glob("*.json"))
+            self.assertGreater(len(triage_files), 0)
+            triage_path = triage_files[0]
 
-        with open(triage_path) as f:
-            triage_data = json.load(f)
+            with open(triage_path, "r", encoding="utf-8") as f:
+                triage_data = json.load(f)
 
-        script = f"""
+            script = f"""
 const rawData = {json.dumps(triage_data)};
 if (!hooks.renderUsersTab) {{
   throw new Error("renderUsersTab function is not defined in dashboard.js");
@@ -365,26 +377,28 @@ console.log(JSON.stringify({{
   panelText: panel.textContent
 }}));
 """
-        res = self._run_node_evaluation(script)
-        self.assertGreater(res["rowCount"], 0)
-        # All rows must have username and uid visible
-        found_root = False
-        for row in res["rows"]:
-            row_str = " ".join(row)
-            if "root" in row_str and "0" in row_str:
-                found_root = True
-        self.assertTrue(found_root, "Expected account 'root' with uid 0 in accounts tab rows")
+            res = self._run_node_evaluation(script)
+            self.assertGreater(res["rowCount"], 0)
+            # All rows must have username and uid visible
+            found_root = False
+            for row in res["rows"]:
+                row_str = " ".join(row)
+                if "root" in row_str and "0" in row_str:
+                    found_root = True
+            self.assertTrue(found_root, "Expected account 'root' with uid 0 in accounts tab rows")
 
     def test_v9_report_shows_empty_state_with_explanation(self) -> None:
         """Ingest V9 report, assert timeline, network, accounts empty states contain explanation phrase."""
-        v9_files = list(Path("/tmp/tabs_v9").glob("report_*.json"))
-        if not v9_files:
-            self.skipTest("V9 report not found in /tmp/tabs_v9")
+        with tempfile.TemporaryDirectory() as td:
+            ret = execute_case_cli(["--config", str(self.case_json), "-o", str(td), "--overwrite"])
+            self.assertEqual(ret, 0)
+            v9_files = list(Path(td).glob("report_*.json"))
+            self.assertGreater(len(v9_files), 0)
 
-        with open(v9_files[0]) as f:
-            v9_data = json.load(f)
+            with open(v9_files[0], "r", encoding="utf-8") as f:
+                v9_data = json.load(f)
 
-        script = f"""
+            script = f"""
 const rawData = {json.dumps(v9_data)};
 if (!hooks.renderTimelineTab || !hooks.renderNetworkTab || !hooks.renderUsersTab) {{
   throw new Error("Domain tab render functions not all defined in dashboard.js");
@@ -403,16 +417,16 @@ console.log(JSON.stringify({{
   users: usersText
 }}));
 """
-        res = self._run_node_evaluation(script)
-        # All three must contain the phrase "This report type has no" and name the target report type
-        self.assertIn("This report type has no", res["timeline"])
-        self.assertIn("V3 timeline report", res["timeline"])
+            res = self._run_node_evaluation(script)
+            # All three must contain the phrase "This report type has no" and name the target report type
+            self.assertIn("This report type has no", res["timeline"])
+            self.assertIn("V3 timeline report", res["timeline"])
 
-        self.assertIn("This report type has no", res["network"])
-        self.assertIn("network report", res["network"])
+            self.assertIn("This report type has no", res["network"])
+            self.assertIn("network report", res["network"])
 
-        self.assertIn("This report type has no", res["users"])
-        self.assertIn("V2 triage report", res["users"])
+            self.assertIn("This report type has no", res["users"])
+            self.assertIn("V2 triage report", res["users"])
 
     def test_domain_rows_capped_at_100_with_notice(self) -> None:
         """A report with 150 timeline rows shows 100 and the notice 'Showing first 100 of 150'."""

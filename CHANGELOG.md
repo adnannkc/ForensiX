@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 9.1.0 — 2026-11-09
+
 - Timeline now keeps one event per source log line. Sample detections change from 7 to 5: the sudo rule previously counted the same login and command three times.
 - `3c9b26d` feat: add SHA-512 to the hashing module
 - `b0d7a97` docs: document forensix case and --show-findings in README

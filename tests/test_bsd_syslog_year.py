@@ -235,7 +235,8 @@ class TestBsdSyslogYearContext(unittest.TestCase):
             ev for ev in report.timeline_events
             if ev.category in (TimelineCategory.LOG, TimelineCategory.AUTHENTICATION)
         ]
-        self.assertEqual(len(log_and_auth_events), 8)
+        # One authentication event per auth.log line; the duplicate generic log event is removed by design (see test_timeline_deduplication.py).
+        self.assertEqual(len(log_and_auth_events), 4)
         for ev in log_and_auth_events:
             self.assertIsNotNone(ev.timestamp, f"Event {ev.event_id} missing timestamp")
             self.assertEqual(ev.timestamp.year, 2026)

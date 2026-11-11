@@ -4,11 +4,11 @@
     "case_name": "Synthetic Multi-Domain Forensic Investigation",
     "investigator": "Chief Digital Forensics Examiner"
   },
-  "created_at": "2026-11-01T18:12:59.416906+00:00",
+  "created_at": "2026-11-09T08:37:42.262382+00:00",
   "custody_summary": {
     "chain_integrity": "VERIFIED",
-    "ledger_id": "COCLEDGER-df0d2f93-14fd-472d-902e-663516068889",
-    "terminal_hash": "d387019d6af2fd5d07a6f5d4eb145332f89f1fef96709551368210ab7957462b",
+    "ledger_id": "COCLEDGER-7d56f125-3b1d-42db-80be-2884ab351e36",
+    "terminal_hash": "1133d4d19eb85f7bf05a1c37e27f013f25a65f38cc7262924a5e901486307af2",
     "total_events": 3
   },
   "details": {
@@ -17,13 +17,13 @@
         "attributes": {
           "rule_description": "Identifies observed network traffic targeting TCP destination port 22."
         },
-        "detection_id": "DET-579d971c-2e00-5a09-bf23-13d0eb99d376",
+        "detection_id": "DET-55c47667-9874-5c37-b1b8-d82dae7be0fb",
         "end_timestamp": "2025-10-21T07:12:00.100000+00:00",
         "explanation": "Observed network communication directed to TCP destination port 22.",
         "matched": true,
         "matched_correlation_ids": [],
         "matched_event_ids": [
-          "TIMELINE-b27cf94f-0b0a-4dd8-96f8-a8cdb6990822"
+          "TIMELINE-f410fbdd-3645-4570-b227-6e53cb5ac78a"
         ],
         "matched_source_artifact_ids": [],
         "matched_source_event_ids": [
@@ -38,13 +38,13 @@
         "attributes": {
           "rule_description": "Identifies observed network traffic targeting TCP destination port 22."
         },
-        "detection_id": "DET-2072ccd9-ad3f-5d6d-be08-74e536d4c1e8",
+        "detection_id": "DET-baceb753-1b59-5761-9223-aff6f39dba24",
         "end_timestamp": "2025-10-21T07:12:15.400000+00:00",
         "explanation": "Observed network communication directed to TCP destination port 22.",
         "matched": true,
         "matched_correlation_ids": [],
         "matched_event_ids": [
-          "TIMELINE-27efea42-bdb4-4964-8323-accb405f689a"
+          "TIMELINE-02e90f60-adfb-420a-adcc-062227765503"
         ],
         "matched_source_artifact_ids": [],
         "matched_source_event_ids": [
@@ -59,21 +59,21 @@
         "attributes": {
           "rule_description": "Identifies failed SSH authentication attempts followed chronologically by a successful SSH authentication within the configured time window."
         },
-        "detection_id": "DET-ccf3f3fd-db12-5ab6-9ded-e066fd64cbd4",
+        "detection_id": "DET-7e814e91-7237-5ff2-b80a-e5614365d877",
         "end_timestamp": "2026-10-21T07:12:15.400000+00:00",
         "explanation": "Observed failed SSH authentication attempts followed by a successful SSH authentication within 300 seconds.",
         "matched": true,
         "matched_correlation_ids": [],
         "matched_event_ids": [
-          "TIMELINE-7932c810-9213-44c8-8b86-ed80a141ae97",
-          "TIMELINE-42ea6fb6-d28b-49c1-b9ab-468bc244af9e"
+          "TIMELINE-6d067967-50fb-4a19-b3aa-779e39a411fb",
+          "TIMELINE-8e5329db-f202-4907-b13e-e37547f28844"
         ],
         "matched_source_artifact_ids": [
           "ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15"
         ],
         "matched_source_event_ids": [
-          "AUTH-46efd71d-8f94-49a1-9c5d-d3b403b49435",
-          "AUTH-45034436-fa47-4ef9-8dd9-3666668cdd12"
+          "AUTH-71971398-7acf-4d3e-901e-58c98011409a",
+          "AUTH-9683e32f-6e39-47f8-a8e7-5e754552b6b0"
         ],
         "rule_id": "RULE-ece7e718-eb79-5259-89c9-5536d162b539",
         "rule_name": "Repeated Failed SSH Attempts Followed by Successful SSH Login",
@@ -85,79 +85,23 @@
           "relationship_type": "AUTHENTICATION_PRIVILEGE",
           "rule_description": "Identifies a successful SSH authentication event followed by privileged sudo command execution by the same identity within the configured time window."
         },
-        "detection_id": "DET-9f41ecde-14bf-572a-91e4-e9bd572bb3ec",
+        "detection_id": "DET-f7c6b2a0-10c4-5994-a38a-2512966a2ebf",
         "end_timestamp": "2026-10-21T07:15:22.100000+00:00",
         "explanation": "Observed a successful SSH authentication followed by privileged sudo execution for the same identity within 300 seconds.",
         "matched": true,
         "matched_correlation_ids": [
-          "CORR-1c529425-ee9b-5caa-8123-8d3d675b79e1"
+          "CORR-5abc8a87-2d53-50c3-bd16-af6258699098"
         ],
         "matched_event_ids": [
-          "TIMELINE-42ea6fb6-d28b-49c1-b9ab-468bc244af9e",
-          "TIMELINE-7d76518d-24c2-4345-9087-a28f3aa55425"
+          "TIMELINE-8e5329db-f202-4907-b13e-e37547f28844",
+          "TIMELINE-66056985-8d77-4c83-b746-a28f64dfff05"
         ],
         "matched_source_artifact_ids": [
           "ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15"
         ],
         "matched_source_event_ids": [
-          "AUTH-45034436-fa47-4ef9-8dd9-3666668cdd12",
-          "AUTH-4d9fa752-0ce5-4493-ad4b-b006aa85016b"
-        ],
-        "rule_id": "RULE-e4957412-2337-5242-881a-81deb75f505c",
-        "rule_name": "SSH Authentication Followed by Sudo",
-        "start_timestamp": "2026-10-21T07:12:15.400000+00:00",
-        "time_delta_seconds": 186.7
-      },
-      {
-        "attributes": {
-          "relationship_type": "AUTHENTICATION_PRIVILEGE",
-          "rule_description": "Identifies a successful SSH authentication event followed by privileged sudo command execution by the same identity within the configured time window."
-        },
-        "detection_id": "DET-7ce34ca2-dee4-596c-8535-f500409c6a77",
-        "end_timestamp": "2026-10-21T07:15:22.100000+00:00",
-        "explanation": "Observed a successful SSH authentication followed by privileged sudo execution for the same identity within 300 seconds.",
-        "matched": true,
-        "matched_correlation_ids": [
-          "CORR-7ae911dd-2865-5054-aafe-5d6ec654ddb6"
-        ],
-        "matched_event_ids": [
-          "TIMELINE-42ea6fb6-d28b-49c1-b9ab-468bc244af9e",
-          "TIMELINE-b971549e-577e-4999-969c-4e4142a66538"
-        ],
-        "matched_source_artifact_ids": [
-          "ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15"
-        ],
-        "matched_source_event_ids": [
-          "AUTH-45034436-fa47-4ef9-8dd9-3666668cdd12",
-          "EVT-2ba7788e-8b5b-4bdb-bc49-f403a7198ea7"
-        ],
-        "rule_id": "RULE-e4957412-2337-5242-881a-81deb75f505c",
-        "rule_name": "SSH Authentication Followed by Sudo",
-        "start_timestamp": "2026-10-21T07:12:15.400000+00:00",
-        "time_delta_seconds": 186.7
-      },
-      {
-        "attributes": {
-          "relationship_type": "AUTHENTICATION_PRIVILEGE",
-          "rule_description": "Identifies a successful SSH authentication event followed by privileged sudo command execution by the same identity within the configured time window."
-        },
-        "detection_id": "DET-f2fbb8ee-b7ea-5e25-baed-3adf7dc0632a",
-        "end_timestamp": "2026-10-21T07:15:22.100000+00:00",
-        "explanation": "Observed a successful SSH authentication followed by privileged sudo execution for the same identity within 300 seconds.",
-        "matched": true,
-        "matched_correlation_ids": [
-          "CORR-00c4d9ce-e2cd-5724-b76f-be2db4f4d112"
-        ],
-        "matched_event_ids": [
-          "TIMELINE-7ffffda3-799b-49a1-8b65-be50e30ad7af",
-          "TIMELINE-7d76518d-24c2-4345-9087-a28f3aa55425"
-        ],
-        "matched_source_artifact_ids": [
-          "ART-db3fae52-6d2f-5ff5-b377-d2b1a061fa15"
-        ],
-        "matched_source_event_ids": [
-          "EVT-a27ee87a-76fe-4256-9419-bea1d54b4a1d",
-          "AUTH-4d9fa752-0ce5-4493-ad4b-b006aa85016b"
+          "AUTH-9683e32f-6e39-47f8-a8e7-5e754552b6b0",
+          "AUTH-9f53824b-3654-41ae-b732-261890c3212b"
         ],
         "rule_id": "RULE-e4957412-2337-5242-881a-81deb75f505c",
         "rule_name": "SSH Authentication Followed by Sudo",
@@ -190,18 +134,18 @@
     ],
     "memory_artifacts_analyzed": 6,
     "network_packets_analyzed": 6,
-    "pipeline_run_id": "RUN-7a0fa82f-f8d8-44ed-acf3-9579f636e538",
-    "total_correlations": 402,
-    "total_detections": 7,
-    "total_timeline_events": 40
+    "pipeline_run_id": "RUN-07824e78-ac00-4b67-bf6b-79a64ea5b8fa",
+    "total_correlations": 152,
+    "total_detections": 5,
+    "total_timeline_events": 31
   },
   "evidence_inventory": [],
   "findings_summary": {
-    "matched_detections": 7,
-    "total_correlations": 402,
+    "matched_detections": 5,
+    "total_correlations": 152,
     "total_host_artifacts": 42,
-    "total_rule_evaluations": 7,
-    "total_timeline_events": 40
+    "total_rule_evaluations": 5,
+    "total_timeline_events": 31
   },
   "forensix_version": "9.1.0",
   "limitations": {
@@ -211,6 +155,6 @@
     ],
     "warnings": []
   },
-  "report_id": "REP8-7b5b0666-e847-4403-9507-c49091b24483",
+  "report_id": "REP8-4e5bad9d-56a0-4137-839f-1db0a8459f69",
   "report_schema": "8.0"
 }

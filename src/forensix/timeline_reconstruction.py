@@ -297,8 +297,27 @@ class TimelineReconstructor:
         duplicates_removed = 0
 
         if self.deduplicate:
+            # Set of (source_path, source_line) covered by an authentication event
+            auth_lines: Set[Tuple[str, int]] = {
+                (e.source_path, e.source_line)
+                for e in sorted_events
+                if (e.category == TimelineCategory.AUTHENTICATION or getattr(e.category, "value", None) == "authentication")
+                and e.source_path is not None
+                and e.source_line is not None
+            }
+
             seen_fingerprints: Set[Tuple[Any, ...]] = set()
             for event in sorted_events:
+                # Prefer authentication event over generic log event for the same source log line
+                if (
+                    (event.category == TimelineCategory.LOG or getattr(event.category, "value", None) == "log")
+                    and event.source_path is not None
+                    and event.source_line is not None
+                    and (event.source_path, event.source_line) in auth_lines
+                ):
+                    duplicates_removed += 1
+                    continue
+
                 fp = compute_event_fingerprint(event)
                 if fp in seen_fingerprints:
                     duplicates_removed += 1

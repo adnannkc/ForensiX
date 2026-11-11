@@ -1199,8 +1199,8 @@ class TestReportReader(unittest.TestCase):
         self.assertEqual(ingested.metadata.case_id, "CASE-2026-SYNTHETIC-001")
         self.assertEqual(ingested.metadata.case_name, "Synthetic Multi-Domain Forensic Investigation")
         self.assertEqual(ingested.metadata.investigator, "Chief Digital Forensics Examiner")
-        self.assertEqual(ingested.counts.detection_count, 7)
-        self.assertEqual(ingested.counts.matched_detection_count, 7)
+        self.assertEqual(ingested.counts.detection_count, 5)
+        self.assertEqual(ingested.counts.matched_detection_count, 5)
 
     def test_schema_8_0_missing_required_keys_rejected(self) -> None:
         """Verify report with 8.0 marker but missing a required section raises ReportSchemaError."""

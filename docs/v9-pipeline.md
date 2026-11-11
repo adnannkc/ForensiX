@@ -150,19 +150,19 @@ The run manifest is saved as strictly `pipeline_manifest.json` in the root of th
   "generated_files": [
     {
       "relative_path": "report_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "7a5c666e2fe86c1939d205e4881e46d1b361ac621f6730c73ac4a8923b58980b",
-      "size_bytes": 9796,
+      "sha256": "2226ee1da5264317bde39d9596ffe595c7eab2499fa1ea99a64c73e5c665b522",
+      "size_bytes": 7114,
       "file_type": "advanced_report_json"
     },
     {
       "relative_path": "report_CASE-2026-SYNTHETIC-001.html",
-      "sha256": "58c90cf12687b1d3b1deb340a7ca7b9fba98b1dcd56f304908be04cc0214e29f",
-      "size_bytes": 20316,
+      "sha256": "b36c5dd3fdc1be75665b71963618cf889ebfc89f25f6c64abe0aa30a50e96f3b",
+      "size_bytes": 17166,
       "file_type": "advanced_report_html"
     },
     {
       "relative_path": "ledger_CASE-2026-SYNTHETIC-001.json",
-      "sha256": "b17ddf30bfde2573dad7ef12a16710feda083348f0c655d49cb66f92926aeebc",
+      "sha256": "cdcac5b00a164f8eea84d0ef4f7cc1d94f9105d0e4bb0b2309784b5ad8c9996c",
       "size_bytes": 4943,
       "file_type": "custody_ledger_json"
     }
@@ -220,20 +220,20 @@ Stage Execution Summary:
   [04/12] HOST_ANALYSIS ............. COMPLETED (0.0081s, 42 records)
   [05/12] NETWORK_ANALYSIS .......... COMPLETED (0.0014s, 6 records)
   [06/12] MEMORY_ANALYSIS ........... COMPLETED (0.0017s, 6 records)
-  [07/12] TIMELINE_RECONSTRUCTION ... COMPLETED (0.0002s, 40 records)
-  [08/12] CORRELATION ............... COMPLETED (0.0206s, 432 records)
-  [09/12] DETECTION ................. COMPLETED (0.0011s, 7 records)
+  [07/12] TIMELINE_RECONSTRUCTION ... COMPLETED (0.0002s, 31 records)
+  [08/12] CORRELATION ............... COMPLETED (0.0206s, 152 records)
+  [09/12] DETECTION ................. COMPLETED (0.0011s, 5 records)
   [10/12] REPORT_SYNTHESIS .......... COMPLETED (0.0019s, 2 records)
   [11/12] CUSTODY_FINALIZATION ...... COMPLETED (0.0006s, 4 records)
   [12/12] RUN_MANIFEST .............. COMPLETED (0.0000s, 3 records)
 ------------------------------------------------------------------------------
 Generated Artifacts & Cryptographic Digests:
-  • report_CASE-2026-SYNTHETIC-001.json  (9.6 KB, advanced_report_json)
-    SHA-256: 7a5c666e2fe86c1939d205e4881e46d1b361ac621f6730c73ac4a8923b58980b
-  • report_CASE-2026-SYNTHETIC-001.html  (19.8 KB, advanced_report_html)
-    SHA-256: 58c90cf12687b1d3b1deb340a7ca7b9fba98b1dcd56f304908be04cc0214e29f
+  • report_CASE-2026-SYNTHETIC-001.json  (6.9 KB, advanced_report_json)
+    SHA-256: 2226ee1da5264317bde39d9596ffe595c7eab2499fa1ea99a64c73e5c665b522
+  • report_CASE-2026-SYNTHETIC-001.html  (16.8 KB, advanced_report_html)
+    SHA-256: b36c5dd3fdc1be75665b71963618cf889ebfc89f25f6c64abe0aa30a50e96f3b
   • ledger_CASE-2026-SYNTHETIC-001.json  (4.8 KB, custody_ledger_json)
-    SHA-256: b17ddf30bfde2573dad7ef12a16710feda083348f0c655d49cb66f92926aeebc
+    SHA-256: cdcac5b00a164f8eea84d0ef4f7cc1d94f9105d0e4bb0b2309784b5ad8c9996c
 ==============================================================================
 Final Exit Code : 0 (Status: SUCCESS)
 ==============================================================================
@@ -254,14 +254,14 @@ Final Exit Code : 0 (Status: SUCCESS)
 >    - Host artifacts analyzed: `42`
 >    - Network packets analyzed: `6`
 >    - Memory artifacts analyzed: `6`
->    - Timeline events reconstructed: `40`
->    - Cross-domain correlations discovered: `432`
->    - Detections matched: `7`
+>    - Timeline events reconstructed: `31`
+>    - Cross-domain correlations discovered: `152`
+>    - Detections matched: `5`
 >    - Custody finalization records: `4`
 > 2. **Rule Evaluations & Detection Names**:
 >    - `Baseline SSH Network Port Observation` (matched: `true`, 2 instances)
 >    - `Repeated Failed SSH Attempts Followed by Successful SSH Login` (matched: `true`, 1 instance)
->    - `SSH Authentication Followed by Sudo` (matched: `true`, 3 instances)
+>    - `SSH Authentication Followed by Sudo` (matched: `true`, 1 instance)
 >    - `Baseline Memory Process Name Observation (nc)` (matched: `true`, 1 instance)
 > 3. **Input Integrity**:
 >    - Evidence inputs (`traffic_incident.pcap`, `memory_artifacts.json`, `passwd`, `auth.log`) are generated deterministically and retain bit-for-bit identical hashes across all runs.

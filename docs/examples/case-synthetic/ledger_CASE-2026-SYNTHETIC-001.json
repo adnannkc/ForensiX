@@ -1,17 +1,17 @@
 {
   "schema_version": "8.0",
-  "ledger_id": "COCLEDGER-df0d2f93-14fd-472d-902e-663516068889",
-  "created_at": "2026-11-01T18:12:59.377389+00:00",
+  "ledger_id": "COCLEDGER-7d56f125-3b1d-42db-80be-2884ab351e36",
+  "created_at": "2026-11-09T08:37:42.216234+00:00",
   "case_id": "CASE-2026-SYNTHETIC-001",
   "description": "Synthetic Multi-Domain Forensic Investigation",
   "total_events": 4,
-  "terminal_hash": "1bbdd5f64119c7d0182e8dc3e0345a0f23eccbca63e48d7c5aaab6c156b9e946",
-  "ledger_digest": "f52fb8c27d8541a8586578d3502fd653859366c9d5cc683729b91f6a9c56ccba",
+  "terminal_hash": "5819e895e097a3df8a26ce40b2be2884d6d45b0da881455bda33fb39810fbc20",
+  "ledger_digest": "1cbab126b97ea2fe9697f825ade44dba0b4c54fa5ae5016be7c98649add29ba3",
   "events": [
     {
-      "event_id": "COCEVT-dbbd7bdc-2534-41fa-812d-006103d6e339",
+      "event_id": "COCEVT-c1c80eb0-2521-40ee-9531-1c6e22def51c",
       "sequence_number": 0,
-      "timestamp": "2026-11-01T18:12:59.377478+00:00",
+      "timestamp": "2026-11-09T08:37:42.216375+00:00",
       "timestamp_source": "HOST_SYSTEM_CLOCK",
       "action_type": "EVIDENCE_RECEIVED",
       "evidence_id": "evidence_host",
@@ -27,12 +27,12 @@
       "verification_method": null,
       "notes": "Host evidence directory 'evidence_host' ingested into pipeline",
       "prev_event_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "record_hash": "83c891c98e2f7c8af7662b6fc4c8541014ba17dfdb83906e1189b49fc29d953e"
+      "record_hash": "8ad8726cedc2d580b14703a886250a1abffe53bff8a0249065198e75f10d706e"
     },
     {
-      "event_id": "COCEVT-7030f04b-0f7f-41d4-bdb8-c435d07a7b73",
+      "event_id": "COCEVT-4c436c9a-ca4b-42af-89e9-70340d565fe3",
       "sequence_number": 1,
-      "timestamp": "2026-11-01T18:12:59.377702+00:00",
+      "timestamp": "2026-11-09T08:37:42.216708+00:00",
       "timestamp_source": "HOST_SYSTEM_CLOCK",
       "action_type": "EVIDENCE_RECEIVED",
       "evidence_id": "traffic_incident.pcap",
@@ -49,13 +49,13 @@
       },
       "verification_method": null,
       "notes": "Network capture 'traffic_incident.pcap' ingested into pipeline",
-      "prev_event_hash": "83c891c98e2f7c8af7662b6fc4c8541014ba17dfdb83906e1189b49fc29d953e",
-      "record_hash": "43dbc4ce35c47f3138cfae2efac66fc2ac407e427a27208c7752971648261064"
+      "prev_event_hash": "8ad8726cedc2d580b14703a886250a1abffe53bff8a0249065198e75f10d706e",
+      "record_hash": "4aeb9d9109b2e0b63953e5e5d77baf5a93979ae76d31f1b6c0bc214d114fdf1a"
     },
     {
-      "event_id": "COCEVT-fac5cf57-5bbd-4e69-8ad2-18057434ca3e",
+      "event_id": "COCEVT-4c81039c-9e02-4a9c-b6cf-f18603e5495c",
       "sequence_number": 2,
-      "timestamp": "2026-11-01T18:12:59.377873+00:00",
+      "timestamp": "2026-11-09T08:37:42.216991+00:00",
       "timestamp_source": "HOST_SYSTEM_CLOCK",
       "action_type": "EVIDENCE_RECEIVED",
       "evidence_id": "memory_artifacts.json",
@@ -72,16 +72,16 @@
       },
       "verification_method": null,
       "notes": "Memory artifact file 'memory_artifacts.json' ingested into pipeline",
-      "prev_event_hash": "43dbc4ce35c47f3138cfae2efac66fc2ac407e427a27208c7752971648261064",
-      "record_hash": "d387019d6af2fd5d07a6f5d4eb145332f89f1fef96709551368210ab7957462b"
+      "prev_event_hash": "4aeb9d9109b2e0b63953e5e5d77baf5a93979ae76d31f1b6c0bc214d114fdf1a",
+      "record_hash": "1133d4d19eb85f7bf05a1c37e27f013f25a65f38cc7262924a5e901486307af2"
     },
     {
-      "event_id": "COCEVT-a9f6d4eb-55d9-487a-8b24-11d3190e6306",
+      "event_id": "COCEVT-e640e8b5-3b23-4052-9570-27f43e5b4c51",
       "sequence_number": 3,
-      "timestamp": "2026-11-01T18:12:59.418426+00:00",
+      "timestamp": "2026-11-09T08:37:42.265362+00:00",
       "timestamp_source": "HOST_SYSTEM_CLOCK",
       "action_type": "REPORT_GENERATED",
-      "evidence_id": "REP8-7b5b0666-e847-4403-9507-c49091b24483",
+      "evidence_id": "REP8-4e5bad9d-56a0-4137-839f-1db0a8459f69",
       "actor": {
         "declared_identity": "Chief Digital Forensics Examiner",
         "role": "Lead Incident Responder",
@@ -92,9 +92,9 @@
       "destination_location": null,
       "hashes": {},
       "verification_method": null,
-      "notes": "Generated Schema 8.0 Advanced Forensic Report 'REP8-7b5b0666-e847-4403-9507-c49091b24483' covering multi-domain pipeline execution (run_id: RUN-7a0fa82f-f8d8-44ed-acf3-9579f636e538)",
-      "prev_event_hash": "d387019d6af2fd5d07a6f5d4eb145332f89f1fef96709551368210ab7957462b",
-      "record_hash": "1bbdd5f64119c7d0182e8dc3e0345a0f23eccbca63e48d7c5aaab6c156b9e946"
+      "notes": "Generated Schema 8.0 Advanced Forensic Report 'REP8-4e5bad9d-56a0-4137-839f-1db0a8459f69' covering multi-domain pipeline execution (run_id: RUN-07824e78-ac00-4b67-bf6b-79a64ea5b8fa)",
+      "prev_event_hash": "1133d4d19eb85f7bf05a1c37e27f013f25a65f38cc7262924a5e901486307af2",
+      "record_hash": "5819e895e097a3df8a26ce40b2be2884d6d45b0da881455bda33fb39810fbc20"
     }
   ],
   "evidentiary_notice": "NOTICE: Cryptographic hash chaining detects modifications to recorded event data when verified against an independently preserved reference digest. Hash chaining alone does NOT authenticate human actor identity, establish legal chain of custody, provide trusted timestamps, or prevent undetectable history rewriting if no external anchor exists."

@@ -8,7 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from forensix.hasher import compute_hashes, DEFAULT_CHUNK_SIZE
+from forensix.hasher import (
+    compute_hashes,
+    compute_file_hashes,
+    HashAlgorithms,
+    DEFAULT_CHUNK_SIZE,
+)
 
 
 class TestHasher(unittest.TestCase):
@@ -103,6 +108,40 @@ class TestHasher(unittest.TestCase):
             compute_hashes(sample_file, chunk_size=0)
         with self.assertRaises(ValueError):
             compute_hashes(sample_file, chunk_size=-1)
+
+    def test_sha512_known_digest(self):
+        """SHA-512 of the bytes b'abc' equals the standard known test digest."""
+        abc_file = self.test_dir_path / "abc.txt"
+        abc_file.write_bytes(b"abc")
+        expected_sha512 = (
+            "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
+            "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+        )
+        res = compute_file_hashes(abc_file, algorithms=[HashAlgorithms.SHA512])
+        self.assertEqual(res["sha512"], expected_sha512)
+
+    def test_sha512_streaming_matches_single_read(self):
+        """A file larger than 64 KB chunk size gives same SHA-512 as hashlib.sha512."""
+        large_file = self.test_dir_path / "large_stream.bin"
+        # 128 KB of binary data (> 64 KB default chunk size)
+        data = bytes((i * 17 + 3) % 256 for i in range(128 * 1024))
+        large_file.write_bytes(data)
+        expected_sha512 = hashlib.sha512(data).hexdigest()
+        res = compute_file_hashes(large_file, chunk_size=DEFAULT_CHUNK_SIZE, algorithms=[HashAlgorithms.SHA512])
+        self.assertEqual(res["sha512"], expected_sha512)
+
+    def test_sha512_missing_file_raises(self):
+        """Nonexistent file raises FileNotFoundError the same error type as existing algorithms."""
+        nonexistent = self.test_dir_path / "missing_file.bin"
+        with self.assertRaises(FileNotFoundError):
+            compute_file_hashes(nonexistent, algorithms=[HashAlgorithms.SHA512])
+
+    def test_sha512_does_not_change_default_output(self):
+        """compute_file_hashes with default arguments returns exactly the same keys as before."""
+        sample_file = self.test_dir_path / "sample.txt"
+        sample_file.write_bytes(b"forensic evidence sample")
+        result = compute_file_hashes(sample_file)
+        self.assertEqual(set(result.keys()), {"md5", "sha256"})
 
 
 if __name__ == "__main__":

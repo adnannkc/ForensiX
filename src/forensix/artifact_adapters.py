@@ -267,8 +267,11 @@ class FilesystemAdapter(BaseArtifactAdapter):
         rec: ArtifactRecord,
         source_artifact_id: Optional[str] = None,
     ) -> Tuple[TimelineEvent, ...]:
-        """Extract events from an ArtifactRecord."""
-        source_path = rec.source_path
+        source_path = (
+            rec.relative_path
+            if (rec.relative_path is not None and str(rec.relative_path).strip())
+            else rec.source_path
+        )
         if not source_path:
             raise ValueError("ArtifactRecord missing required 'source_path'")
 

@@ -365,6 +365,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if raw_args and raw_args[0] == "custody":
         from forensix.custody_cli import custody_main
         return custody_main(raw_args[1:])
+    if raw_args and raw_args[0] in ("note", "notes"):
+        from forensix.notes_cli import run_note_cli
+        return run_note_cli(raw_args[1:])
     if raw_args and raw_args[0] == "timeline":
         return timeline_main(raw_args[1:])
 

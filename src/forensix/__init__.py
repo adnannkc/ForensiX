@@ -788,6 +788,15 @@ from forensix.case_cli import (
     case_main,
     execute_case_cli,
 )
+from forensix.notes_models import (
+    InvestigatorNote,
+    NotesDocument,
+)
+from forensix.notes_storage import (
+    add_note,
+    load_notes,
+    save_notes,
+)
 
 
 __all__ = [
@@ -1411,5 +1420,11 @@ __all__ = [
     "build_case_parser",
     "execute_case_cli",
     "case_main",
+    # Investigator Notes
+    "InvestigatorNote",
+    "NotesDocument",
+    "add_note",
+    "load_notes",
+    "save_notes",
 ]
 

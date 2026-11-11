@@ -184,6 +184,9 @@
         <button class="tab-btn active" data-tab="tab-metadata" id="tab-btn-metadata">Case Metadata</button>
         <button class="tab-btn" data-tab="tab-summary" id="tab-btn-summary">Summary Metrics</button>
         <button class="tab-btn" data-tab="tab-raw" id="tab-btn-raw">Forensic Data Explorer</button>
+        <button class="tab-btn" data-tab="tab-timeline" id="tab-btn-timeline">Timeline</button>
+        <button class="tab-btn" data-tab="tab-network" id="tab-btn-network">Network</button>
+        <button class="tab-btn" data-tab="tab-users" id="tab-btn-users">Accounts</button>
       </div>
 
       <!-- Tab 1: Case Metadata -->
@@ -221,6 +224,21 @@
             <!-- Built dynamically via safe DOM createElement/textContent -->
           </div>
         </div>
+      </div>
+
+      <!-- Tab 4: Chronological Timeline Events -->
+      <div id="tab-timeline" class="tab-panel hidden">
+        <!-- Populated via safe DOM -->
+      </div>
+
+      <!-- Tab 5: Network Communications -->
+      <div id="tab-network" class="tab-panel hidden">
+        <!-- Populated via safe DOM -->
+      </div>
+
+      <!-- Tab 6: User Accounts & Credentials -->
+      <div id="tab-users" class="tab-panel hidden">
+        <!-- Populated via safe DOM -->
       </div>
     </section>
 

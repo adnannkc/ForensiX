@@ -1099,3 +1099,58 @@ body {
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
+
+/* Domain Tabs: Tables, Notice Banners, and Empty States */
+.domain-table-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.domain-notice-banner {
+  background-color: rgba(6, 182, 212, 0.12);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.domain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.domain-table th {
+  background-color: var(--bg-card);
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.domain-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.domain-table tr:hover td {
+  background-color: var(--bg-hover);
+}
+
+.domain-empty-explanation {
+  max-width: 540px;
+  margin: 0 auto;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}

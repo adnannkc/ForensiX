@@ -283,7 +283,7 @@ class TestTimelineV3Hardening(unittest.TestCase):
         self.assertEqual(report_cs.event_count, 0)  # "alice" was lowercase in auth.log
 
         # 3. Combined AND filter (Category + Text + Source Path)
-        auth_file = str(self.evidence_dir / "var" / "log" / "auth.log")
+        auth_file = "var/log/auth.log"
         exit_code_comb, report_comb = execute_timeline_cli([
             str(self.evidence_dir),
             "--category", "AUTHENTICATION",

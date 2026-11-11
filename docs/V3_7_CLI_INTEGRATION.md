@@ -75,7 +75,7 @@ All supplied filters are evaluated together using logical AND:
 * `--end <TIMESTAMP>`: Latest event timestamp (inclusive ISO 8601 string, e.g. `2026-09-30T17:00:00Z`).
 * `--category <CATEGORY>`: Factual category filter. Valid choices: `FILESYSTEM`, `LOG`, `AUTHENTICATION`, `ACCOUNT`, `PERSISTENCE` (case-insensitive).
 * `--event-type <TYPE>`: Exact match for event classification (e.g. `ssh_login`, `file_created`).
-* `--source-path <PATH>`: Exact match for evidence source file path (e.g. `/var/log/auth.log`).
+* `--source-path <PATH>`: Exact match for evidence source file path (e.g. `var/log/auth.log`). Paths are evidence-relative, and absolute paths return no matches.
 * `--source-artifact-id <ID>`: Filter events by parent forensic artifact tracking ID.
 * `--source-event-id <ID>`: Filter events by underlying specialized event ID.
 * `--text <SUBSTRING>`: Substring search across event descriptions, raw lines, and attributes.
@@ -109,7 +109,7 @@ python3 -m forensix timeline ./evidence \
     --start 2026-09-30T12:00:00Z \
     --end 2026-09-30T16:00:00Z \
     --event-type ssh_login \
-    --source-path /var/log/auth.log \
+    --source-path var/log/auth.log \
     --format html \
     --output ./reports/ssh_window.html
 ```

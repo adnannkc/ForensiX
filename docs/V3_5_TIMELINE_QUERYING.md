@@ -29,7 +29,7 @@ Queries are specified via the immutable `TimelineQuery` dataclass or via keyword
 | `end` | `datetime`, `str`, or `None` | Inclusive upper bound (`<=`) | Latest event timestamp. Strings are validated via V3.2 normalizer. |
 | `category` | `TimelineCategory`, `str`, or `None` | Exact enum value match | Category filter (`FILESYSTEM`, `LOG`, `AUTHENTICATION`, `ACCOUNT`, `PERSISTENCE`). |
 | `event_type` | `str` or `None` | Exact string match | Specific event type (e.g., `ssh_login`, `sudo_execution`). Non-empty string. |
-| `source_path` | `str`, `Path`, or `None` | Exact string match | Path of the evidence source file (e.g., `/var/log/auth.log`). |
+| `source_path` | `str`, `Path`, or `None` | Exact string match | Path of the evidence source file (e.g., `var/log/auth.log`). Paths are evidence-relative, and absolute paths return no matches. |
 | `source_artifact_id`| `str` or `None` | Exact string match | Identifier of the parent artifact record (e.g., `ART-101`). |
 | `source_event_id` | `str` or `None` | Exact string match | Identifier of the underlying specialized event record (e.g., `EVT-202`). |
 | `text` | `str` or `None` | Substring inclusion | Substring search across `description`, `raw_data`, `event_type`, and attributes. |
@@ -139,7 +139,7 @@ query = TimelineQuery(
     end=datetime(2023, 5, 1, 17, 0, 0, tzinfo=timezone.utc),
     category=TimelineCategory.AUTHENTICATION,
     event_type="ssh_login",
-    source_path="/var/log/auth.log",
+    source_path="var/log/auth.log",
 )
 
 # 3. Execute the query

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Fixed: authentication and log timeline events use evidence-relative source_path (no analyst home directory in output).
+- Changed: timeline --source-path expects evidence-relative paths; absolute-path filters return no results.
+- Changed: SAME_PATH correlation can now link authentication and filesystem events that share a relative path. Sample count unchanged (152); may differ on other evidence.
+
 ## 9.1.0 — 2026-11-09
 
 - Timeline now keeps one event per source log line. Sample detections change from 7 to 5: the sudo rule previously counted the same login and command three times.

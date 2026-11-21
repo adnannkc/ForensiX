@@ -78,6 +78,7 @@ class TimelineQuery:
         source_event_id: Specialized record tracking ID (exact match).
         text: Substring to search across description, raw_data, and string attributes.
         case_sensitive: Whether text search is case-sensitive (default: False).
+        user: Specific user name to match against structured user/username attributes (exact match).
     """
 
     start: Optional[datetime] = None
@@ -89,6 +90,7 @@ class TimelineQuery:
     source_event_id: Optional[str] = None
     text: Optional[str] = None
     case_sensitive: bool = False
+    user: Optional[str] = None
 
     def __init__(
         self,
@@ -102,6 +104,7 @@ class TimelineQuery:
         source_event_id: Optional[str] = None,
         text: Optional[str] = None,
         case_sensitive: bool = False,
+        user: Optional[str] = None,
     ) -> None:
         norm_start = _validate_and_normalize_query_timestamp(start, "start")
         norm_end = _validate_and_normalize_query_timestamp(end, "end")
@@ -200,6 +203,16 @@ class TimelineQuery:
         if not isinstance(case_sensitive, bool):
             raise TypeError(f"case_sensitive must be bool, got {type(case_sensitive).__name__}")
 
+        # Validate user
+        norm_user: Optional[str] = None
+        if user is not None:
+            if not isinstance(user, str):
+                raise TypeError(f"user must be str, got {type(user).__name__}")
+            clean_user = user.strip()
+            if not clean_user:
+                raise ValueError("user cannot be empty or whitespace")
+            norm_user = clean_user
+
         object.__setattr__(self, "start", norm_start)
         object.__setattr__(self, "end", norm_end)
         object.__setattr__(self, "category", norm_cat)
@@ -209,6 +222,7 @@ class TimelineQuery:
         object.__setattr__(self, "source_event_id", norm_eid)
         object.__setattr__(self, "text", norm_text)
         object.__setattr__(self, "case_sensitive", case_sensitive)
+        object.__setattr__(self, "user", norm_user)
 
     def matches(self, event: TimelineEvent) -> bool:
         """
@@ -239,6 +253,23 @@ class TimelineQuery:
         # 5. Source event ID filter (exact match)
         if self.source_event_id is not None and event.source_event_id != self.source_event_id:
             return False
+
+        # 6. User filter (exact match on structured attributes)
+        if self.user is not None:
+            matched_user = False
+            if event.attributes:
+                if isinstance(event.attributes, dict):
+                    attr_items = event.attributes.items()
+                else:
+                    attr_items = event.attributes
+                for item in attr_items:
+                    if isinstance(item, (tuple, list)) and len(item) == 2:
+                        k, v = item
+                        if k in ("user", "username") and v == self.user:
+                            matched_user = True
+                            break
+            if not matched_user:
+                return False
 
         # 6. Timestamp range filtering
         if self.start is not None or self.end is not None:
@@ -318,6 +349,7 @@ class TimelineQuery:
             "source_event_id": self.source_event_id,
             "text": self.text,
             "case_sensitive": self.case_sensitive,
+            "user": self.user,
         }
 
 

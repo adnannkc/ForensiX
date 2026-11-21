@@ -138,6 +138,11 @@ def build_timeline_parser() -> argparse.ArgumentParser:
         default=False,
         help="Enable case-sensitive matching for text search (default: case-insensitive).",
     )
+    filter_group.add_argument(
+        "--user",
+        default=None,
+        help="Filter events by exact user name (e.g. 'root', 'user_1002').",
+    )
 
     parser.add_argument(
         "-v",
@@ -237,6 +242,7 @@ def execute_timeline_cli(
             args.source_artifact_id,
             args.source_event_id,
             args.text,
+            args.user,
         )
     )
 
@@ -253,6 +259,7 @@ def execute_timeline_cli(
                 source_event_id=args.source_event_id,
                 text=args.text,
                 case_sensitive=args.case_sensitive,
+                user=args.user,
             )
         except (ValueError, TypeError) as err:
             print(f"Error: Invalid timeline filter: {err}", file=sys.stderr)

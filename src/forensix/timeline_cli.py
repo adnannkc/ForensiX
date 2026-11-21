@@ -282,6 +282,7 @@ def execute_timeline_cli(
         raw_events = adapt_artifacts(
             triage_result.artifacts.artifacts,
             ignore_unsupported=True,
+            evidence_root=evidence_path,
         )
     else:
         raw_events = ()

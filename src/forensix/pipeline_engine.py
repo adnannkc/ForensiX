@@ -473,6 +473,7 @@ class InvestigationPipeline:
                             host_collection.artifacts,
                             ignore_unsupported=True,
                             log_timestamp_year=self.config.log_year,
+                            evidence_root=self.config.evidence_host_dir,
                         )
                     )
 

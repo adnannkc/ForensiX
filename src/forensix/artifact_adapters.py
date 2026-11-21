@@ -27,9 +27,7 @@ Strict Forensic Boundaries:
 """
 
 from abc import ABC, abstractmethod
-import dataclasses
 from datetime import datetime, timezone
-import os
 from pathlib import Path
 import posixpath
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -720,7 +718,11 @@ class LogAdapter(BaseArtifactAdapter):
             )
         return False
 
-    def adapt(self, artifact: Any) -> Tuple[TimelineEvent, ...]:
+    def adapt(
+        self,
+        artifact: Any,
+        evidence_root: Optional[Union[str, Path]] = None,
+    ) -> Tuple[TimelineEvent, ...]:
         """
         Adapt log artifact to a tuple containing one TimelineEvent.
 
@@ -738,16 +740,19 @@ class LogAdapter(BaseArtifactAdapter):
 
         if isinstance(artifact, HostArtifact):
             if isinstance(artifact.specialized_payload, LogEvent):
-                return self._adapt_log_event(artifact.specialized_payload)
+                return self._adapt_log_event(
+                    artifact.specialized_payload,
+                    evidence_root=evidence_root,
+                )
             raise TypeError(
                 f"HostArtifact payload {type(artifact.specialized_payload).__name__} is not a LogEvent"
             )
 
         if isinstance(artifact, LogEvent):
-            return self._adapt_log_event(artifact)
+            return self._adapt_log_event(artifact, evidence_root=evidence_root)
 
         if isinstance(artifact, dict):
-            return self._adapt_dict(artifact)
+            return self._adapt_dict(artifact, evidence_root=evidence_root)
 
         raise TypeError(f"Unhandled log artifact type: {type(artifact).__name__}")
 
@@ -756,6 +761,7 @@ class LogAdapter(BaseArtifactAdapter):
         evt: LogEvent,
         source_artifact_id: Optional[str] = None,
         log_timestamp_year: Optional[int] = None,
+        evidence_root: Optional[Union[str, Path]] = None,
     ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from a LogEvent."""
         norm_dt: Optional[datetime] = None
@@ -793,13 +799,23 @@ class LogAdapter(BaseArtifactAdapter):
 
         desc = evt.raw_message.strip() if evt.raw_message and evt.raw_message.strip() else f"Log event: {evt.event_type}"
 
+        target_source_path = evt.source_path
+        if evidence_root is not None and evt.source_path:
+            try:
+                try:
+                    target_source_path = str(Path(evt.source_path).relative_to(Path(evidence_root)))
+                except ValueError:
+                    target_source_path = str(Path(evt.source_path).resolve().relative_to(Path(evidence_root).resolve()))
+            except Exception:
+                target_source_path = evt.source_path
+
         event = create_timeline_event(
             category=TimelineCategory.LOG,
             event_type=evt.event_type,
             description=desc,
             timestamp=norm_dt,
             raw_timestamp=raw_ts,
-            source_path=evt.source_path,
+            source_path=target_source_path,
             source_line=evt.line_number,
             source_artifact_id=target_art_id,
             source_event_id=evt.event_id,
@@ -812,6 +828,7 @@ class LogAdapter(BaseArtifactAdapter):
         self,
         data: Dict[str, Any],
         log_timestamp_year: Optional[int] = None,
+        evidence_root: Optional[Union[str, Path]] = None,
     ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from a log event dictionary."""
         source_path = data.get("source_path") or data.get("path")
@@ -849,13 +866,23 @@ class LogAdapter(BaseArtifactAdapter):
         raw_msg = data.get("raw_message", "")
         desc = raw_msg.strip() if raw_msg and raw_msg.strip() else f"Log event: {event_type}"
 
+        target_source_path = str(source_path)
+        if evidence_root is not None and source_path:
+            try:
+                try:
+                    target_source_path = str(Path(source_path).relative_to(Path(evidence_root)))
+                except ValueError:
+                    target_source_path = str(Path(source_path).resolve().relative_to(Path(evidence_root).resolve()))
+            except Exception:
+                target_source_path = str(source_path)
+
         event = create_timeline_event(
             category=TimelineCategory.LOG,
             event_type=event_type,
             description=desc,
             timestamp=norm_dt,
             raw_timestamp=raw_ts,
-            source_path=str(source_path),
+            source_path=target_source_path,
             source_line=data.get("line_number"),
             source_artifact_id=data.get("source_artifact_id"),
             source_event_id=data.get("event_id") or data.get("source_event_id"),
@@ -901,7 +928,11 @@ class AuthenticationAdapter(BaseArtifactAdapter):
             )
         return False
 
-    def adapt(self, artifact: Any) -> Tuple[TimelineEvent, ...]:
+    def adapt(
+        self,
+        artifact: Any,
+        evidence_root: Optional[Union[str, Path]] = None,
+    ) -> Tuple[TimelineEvent, ...]:
         """
         Adapt authentication artifact to a tuple containing one TimelineEvent.
 
@@ -919,16 +950,19 @@ class AuthenticationAdapter(BaseArtifactAdapter):
 
         if isinstance(artifact, HostArtifact):
             if isinstance(artifact.specialized_payload, AuthenticationRecord):
-                return self._adapt_auth_record(artifact.specialized_payload)
+                return self._adapt_auth_record(
+                    artifact.specialized_payload,
+                    evidence_root=evidence_root,
+                )
             raise TypeError(
                 f"HostArtifact payload {type(artifact.specialized_payload).__name__} is not an AuthenticationRecord"
             )
 
         if isinstance(artifact, AuthenticationRecord):
-            return self._adapt_auth_record(artifact)
+            return self._adapt_auth_record(artifact, evidence_root=evidence_root)
 
         if isinstance(artifact, dict):
-            return self._adapt_dict(artifact)
+            return self._adapt_dict(artifact, evidence_root=evidence_root)
 
         raise TypeError(f"Unhandled authentication artifact type: {type(artifact).__name__}")
 
@@ -937,6 +971,7 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         auth: AuthenticationRecord,
         source_artifact_id: Optional[str] = None,
         log_timestamp_year: Optional[int] = None,
+        evidence_root: Optional[Union[str, Path]] = None,
     ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from an AuthenticationRecord."""
         norm_dt: Optional[datetime] = None
@@ -982,13 +1017,23 @@ class AuthenticationAdapter(BaseArtifactAdapter):
 
         desc = auth.raw_message.strip() if auth.raw_message and auth.raw_message.strip() else f"Authentication activity: {auth.event_type} [{auth.status}]"
 
+        target_source_path = auth.source_path
+        if evidence_root is not None and auth.source_path:
+            try:
+                try:
+                    target_source_path = str(Path(auth.source_path).relative_to(Path(evidence_root)))
+                except ValueError:
+                    target_source_path = str(Path(auth.source_path).resolve().relative_to(Path(evidence_root).resolve()))
+            except Exception:
+                target_source_path = auth.source_path
+
         event = create_timeline_event(
             category=TimelineCategory.AUTHENTICATION,
             event_type=auth.event_type,
             description=desc,
             timestamp=norm_dt,
             raw_timestamp=raw_ts,
-            source_path=auth.source_path,
+            source_path=target_source_path,
             source_line=auth.line_number,
             source_artifact_id=target_art_id,
             source_event_id=auth.auth_id,
@@ -1001,6 +1046,7 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         self,
         data: Dict[str, Any],
         log_timestamp_year: Optional[int] = None,
+        evidence_root: Optional[Union[str, Path]] = None,
     ) -> Tuple[TimelineEvent, ...]:
         """Extract a TimelineEvent from an authentication dictionary."""
         source_path = data.get("source_path") or data.get("path")
@@ -1039,13 +1085,23 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         status = data.get("status", "INFO")
         desc = raw_msg.strip() if raw_msg and raw_msg.strip() else f"Authentication activity: {event_type} [{status}]"
 
+        target_source_path = str(source_path)
+        if evidence_root is not None and source_path:
+            try:
+                try:
+                    target_source_path = str(Path(source_path).relative_to(Path(evidence_root)))
+                except ValueError:
+                    target_source_path = str(Path(source_path).resolve().relative_to(Path(evidence_root).resolve()))
+            except Exception:
+                target_source_path = str(source_path)
+
         event = create_timeline_event(
             category=TimelineCategory.AUTHENTICATION,
             event_type=event_type,
             description=desc,
             timestamp=norm_dt,
             raw_timestamp=raw_ts,
-            source_path=str(source_path),
+            source_path=target_source_path,
             source_line=data.get("line_number"),
             source_artifact_id=data.get("source_artifact_id"),
             source_event_id=data.get("auth_id") or data.get("source_event_id"),
@@ -1192,11 +1248,9 @@ def adapt_artifacts(
     if artifacts is None:
         raise ValueError("Artifacts sequence cannot be None")
 
-    # Step 1: Pre-build deterministic artifact ID and relative path maps from filesystem artifacts
+    # Step 1: Pre-build deterministic artifact ID maps from filesystem artifacts
     v2_to_det_id: Dict[str, str] = {}
     path_to_det_id: Dict[str, str] = {}
-    v2_to_rel_path: Dict[str, str] = {}
-    path_to_rel_path: Dict[str, str] = {}
 
     for art in artifacts:
         if art is None:
@@ -1208,18 +1262,6 @@ def adapt_artifacts(
             rec = art.specialized_payload
 
         if rec is not None:
-            rel_clean: Optional[str] = None
-            if rec.relative_path and rec.relative_path.strip():
-                norm_rel = posixpath.normpath(_normalize_evidence_path(rec.relative_path)).lstrip("/")
-                if norm_rel and norm_rel != ".":
-                    rel_clean = norm_rel
-                    if rec.artifact_id:
-                        v2_to_rel_path[rec.artifact_id] = rel_clean
-                    if rec.source_path:
-                        path_to_rel_path[_normalize_evidence_path(rec.source_path)] = rel_clean
-                    path_to_rel_path[rel_clean] = rel_clean
-                    path_to_rel_path["/" + rel_clean] = rel_clean
-
             try:
                 det_id = compute_deterministic_artifact_id(
                     path=rec.source_path,
@@ -1228,8 +1270,6 @@ def adapt_artifacts(
                 )
                 if rec.artifact_id:
                     v2_to_det_id[rec.artifact_id] = det_id
-                if rel_clean:
-                    v2_to_rel_path[det_id] = rel_clean
                 if rec.source_path:
                     path_to_det_id[_normalize_evidence_path(rec.source_path)] = det_id
                 if rec.relative_path:
@@ -1238,71 +1278,6 @@ def adapt_artifacts(
                     path_to_det_id["/" + norm_rel.lstrip("/")] = det_id
             except ValueError:
                 pass
-
-    root_str = str(evidence_root).strip() if evidence_root is not None else ""
-    root_resolved = Path(root_str).resolve() if root_str else None
-    norm_root = posixpath.normpath(root_str.replace("\\", "/")).rstrip("/") if root_str else ""
-
-    def _resolve_log_or_auth(
-        payload: Union[LogEvent, AuthenticationRecord],
-        host_art: Optional[HostArtifact] = None,
-    ) -> Tuple[Optional[str], Union[LogEvent, AuthenticationRecord]]:
-        src_aid = (
-            (host_art.source_artifact_id or payload.source_artifact_id)
-            if host_art is not None
-            else payload.source_artifact_id
-        )
-        path_cands: List[str] = []
-        if host_art is not None and host_art.source_path:
-            path_cands.append(host_art.source_path)
-        if payload.source_path:
-            path_cands.append(payload.source_path)
-
-        resolved_art_id: Optional[str] = None
-        if src_aid and src_aid in v2_to_det_id:
-            resolved_art_id = v2_to_det_id[src_aid]
-        else:
-            for cand in path_cands:
-                norm_cand = _normalize_evidence_path(cand)
-                if norm_cand in path_to_det_id:
-                    resolved_art_id = path_to_det_id[norm_cand]
-                    break
-
-        rel_path: Optional[str] = None
-        if src_aid and src_aid in v2_to_rel_path:
-            rel_path = v2_to_rel_path[src_aid]
-        elif resolved_art_id and resolved_art_id in v2_to_rel_path:
-            rel_path = v2_to_rel_path[resolved_art_id]
-        else:
-            for cand in path_cands:
-                norm_cand = _normalize_evidence_path(cand)
-                if norm_cand in path_to_rel_path:
-                    rel_path = path_to_rel_path[norm_cand]
-                    break
-
-        if rel_path is None and root_resolved is not None:
-            for cand in path_cands:
-                if os.path.isabs(cand):
-                    try:
-                        rel = Path(cand).resolve().relative_to(root_resolved).as_posix().lstrip("/")
-                        if rel and rel != ".":
-                            rel_path = rel
-                            break
-                    except ValueError:
-                        pass
-                norm_cand = posixpath.normpath(cand.replace("\\", "/"))
-                if norm_root and norm_cand.startswith(norm_root + "/"):
-                    rel = norm_cand[len(norm_root) + 1:].lstrip("/")
-                    if rel and rel != ".":
-                        rel_path = rel
-                        break
-
-        effective = (
-            dataclasses.replace(payload, source_path=str(rel_path))
-            if rel_path
-            else payload
-        )
-        return resolved_art_id, effective
 
     # Step 2: Adapt artifacts with deterministic provenance resolution
     collected: List[TimelineEvent] = []
@@ -1315,23 +1290,62 @@ def adapt_artifacts(
             # Let adapt_artifact raise the descriptive TypeError
             adapt_artifact(art)
 
-        # Resolve deterministic parent artifact ID and evidence-relative source path
-        if isinstance(art, (LogEvent, AuthenticationRecord)) or (
-            isinstance(art, HostArtifact)
-            and isinstance(art.specialized_payload, (LogEvent, AuthenticationRecord))
-        ):
-            raw_payload = art.specialized_payload if isinstance(art, HostArtifact) else art
-            host_wrapper = art if isinstance(art, HostArtifact) else None
-            resolved_art_id, payload = _resolve_log_or_auth(raw_payload, host_wrapper)
-            adapter_fn = (
-                _DEFAULT_LOG_ADAPTER._adapt_log_event
-                if isinstance(payload, LogEvent)
-                else _DEFAULT_AUTH_ADAPTER._adapt_auth_record
-            )
-            events = adapter_fn(
-                payload,
+        # Resolve deterministic parent artifact ID for log/auth events
+        if isinstance(art, LogEvent):
+            resolved_art_id = None
+            if art.source_artifact_id and art.source_artifact_id in v2_to_det_id:
+                resolved_art_id = v2_to_det_id[art.source_artifact_id]
+            elif art.source_path and _normalize_evidence_path(art.source_path) in path_to_det_id:
+                resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
+            events = _DEFAULT_LOG_ADAPTER._adapt_log_event(
+                art,
                 source_artifact_id=resolved_art_id,
                 log_timestamp_year=log_timestamp_year,
+                evidence_root=evidence_root,
+            )
+        elif isinstance(art, HostArtifact) and isinstance(art.specialized_payload, LogEvent):
+            log_payload = art.specialized_payload
+            resolved_art_id = None
+            src_aid = art.source_artifact_id or log_payload.source_artifact_id
+            if src_aid and src_aid in v2_to_det_id:
+                resolved_art_id = v2_to_det_id[src_aid]
+            elif art.source_path and _normalize_evidence_path(art.source_path) in path_to_det_id:
+                resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
+            elif log_payload.source_path and _normalize_evidence_path(log_payload.source_path) in path_to_det_id:
+                resolved_art_id = path_to_det_id[_normalize_evidence_path(log_payload.source_path)]
+            events = _DEFAULT_LOG_ADAPTER._adapt_log_event(
+                log_payload,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+                evidence_root=evidence_root,
+            )
+        elif isinstance(art, AuthenticationRecord):
+            resolved_art_id = None
+            if art.source_artifact_id and art.source_artifact_id in v2_to_det_id:
+                resolved_art_id = v2_to_det_id[art.source_artifact_id]
+            elif art.source_path and _normalize_evidence_path(art.source_path) in path_to_det_id:
+                resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
+            events = _DEFAULT_AUTH_ADAPTER._adapt_auth_record(
+                art,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+                evidence_root=evidence_root,
+            )
+        elif isinstance(art, HostArtifact) and isinstance(art.specialized_payload, AuthenticationRecord):
+            auth_payload = art.specialized_payload
+            resolved_art_id = None
+            src_aid = art.source_artifact_id or auth_payload.source_artifact_id
+            if src_aid and src_aid in v2_to_det_id:
+                resolved_art_id = v2_to_det_id[src_aid]
+            elif art.source_path and _normalize_evidence_path(art.source_path) in path_to_det_id:
+                resolved_art_id = path_to_det_id[_normalize_evidence_path(art.source_path)]
+            elif auth_payload.source_path and _normalize_evidence_path(auth_payload.source_path) in path_to_det_id:
+                resolved_art_id = path_to_det_id[_normalize_evidence_path(auth_payload.source_path)]
+            events = _DEFAULT_AUTH_ADAPTER._adapt_auth_record(
+                auth_payload,
+                source_artifact_id=resolved_art_id,
+                log_timestamp_year=log_timestamp_year,
+                evidence_root=evidence_root,
             )
         else:
             events = adapt_artifact(art)

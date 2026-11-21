@@ -414,6 +414,7 @@ def execute_investigation_cli(
                 triage_result.artifacts.artifacts,
                 ignore_unsupported=True,
                 log_timestamp_year=log_year,
+                evidence_root=resolved_evidence,
             )
     else:
         if args.verbose:

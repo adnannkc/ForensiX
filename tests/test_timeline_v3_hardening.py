@@ -288,7 +288,7 @@ class TestTimelineV3Hardening(unittest.TestCase):
             str(self.evidence_dir),
             "--category", "AUTHENTICATION",
             "--text", "publickey",
-            "--source-path", auth_file,
+            "--source-path", "var/log/auth.log",
             "--output", str(self.output_dir / "combined.json"),
         ])
         self.assertEqual(exit_code_comb, 0)

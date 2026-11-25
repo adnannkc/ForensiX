@@ -129,7 +129,8 @@ function createMockElement(tag, id = '') {{
   "view-overview", "view-explorer", "view-pivots", "loading-state", "error-state",
   "empty-state", "reports-table-container", "reports-table-body", "table-reports",
   "cases-section", "cases-table-container", "cases-table-body", "table-cases",
-  "metric-total-reports", "metric-active-schemas", "metric-total-events", "metric-total-detections",
+  "metric-total-reports", "metric-active-schemas", "metric-total-artifacts", "metric-total-events",
+  "metric-total-detections", "metric-detections-label", "summary-counts-grid",
   "alert-banner", "alert-message", "badge-version"
 ].forEach(id => createMockElement('div', id));
 
@@ -164,6 +165,8 @@ const hookInjection = `
   window.__caseHooks = {{
     renderCaseOverview: typeof renderCaseOverview === 'function' ? renderCaseOverview : null,
     renderOverview: typeof renderOverview === 'function' ? renderOverview : null,
+    renderExplorer: typeof renderExplorer === 'function' ? renderExplorer : null,
+    renderSummaryTab: typeof renderSummaryTab === 'function' ? renderSummaryTab : null,
     state: typeof state !== 'undefined' ? state : null,
     views: typeof views !== 'undefined' ? views : null,
   }};
@@ -358,6 +361,72 @@ console.log(JSON.stringify({ isHidden: isHidden, exists: !!casesSection }));
         res = self._run_node_evaluation(script)
         self.assertTrue(res.get("exists", False), "Cases table container element does not exist")
         self.assertTrue(res.get("isHidden", False), "Cases table is not hidden when reports list is empty")
+
+    def test_cases_heading_and_overview_cards_split_and_cap_labels(self) -> None:
+        """Verify visible Cases heading, split Artifacts/Timeline cards, Correlation links label, and identical cap text."""
+        self.assertIn('<h2 class="cases-heading">Cases</h2>', self.html_text)
+        self.assertIn("Artifacts analyzed", self.html_text)
+        self.assertIn("Timeline events", self.html_text)
+        self.assertIn("Correlation links", self.html_text)
+        self.assertNotIn("Analyzed Artifacts &amp; Events", self.html_text)
+        self.assertNotIn("Detections &amp; Correlations", self.html_text)
+
+        script = """
+hooks.state.reports = [
+  {
+    id: "rep-1",
+    report_type: "schema_8_0",
+    filename: "report_CASE-1.json",
+    metadata: { case_id: "CASE-1", case_name: "Test" },
+    counts: { artifact_count: 42, event_count: 31, detection_count: 5, correlation_count: 50000 },
+    correlations_truncated: true,
+    correlation_cap: 50000
+  }
+];
+hooks.renderOverview();
+const mArt = documentMock.getElementById("metric-total-artifacts").textContent;
+const mEv = documentMock.getElementById("metric-total-events").textContent;
+const mDet = documentMock.getElementById("metric-total-detections").textContent;
+const mLabelTrunc = documentMock.getElementById("metric-detections-label").textContent;
+
+hooks.state.reports[0].correlations_truncated = false;
+hooks.renderOverview();
+const mLabelNormal = documentMock.getElementById("metric-detections-label").textContent;
+
+const rep = {
+  id: "rep-1",
+  report_type: "schema_8_0",
+  filename: "report_CASE-1.json",
+  metadata: { case_id: "CASE-1" },
+  counts: { artifact_count: 42, event_count: 31, correlation_count: 50000, detection_count: 5, matched_detection_count: 5, audit_event_count: 0 }
+};
+const rawTrunc = {
+  details: { correlations_truncated: true, correlation_cap: 50000, correlations_skipped: 228130 }
+};
+hooks.state.activeReportDetails = { id: "rep-1", raw_data: rawTrunc };
+hooks.renderExplorer("rep-1");
+const alertMsg = documentMock.getElementById("alert-message").textContent;
+const summaryText = documentMock.getElementById("summary-counts-grid").textContent;
+
+hooks.renderSummaryTab(rep, { details: {} });
+const summaryUncappedText = documentMock.getElementById("summary-counts-grid").textContent;
+
+console.log(JSON.stringify({
+  mArt, mEv, mDet, mLabelTrunc, mLabelNormal, alertMsg, summaryText, summaryUncappedText
+}));
+"""
+        res = self._run_node_evaluation(script)
+        self.assertEqual(res["mArt"], "42")
+        self.assertEqual(res["mEv"], "31")
+        self.assertEqual(res["mDet"], "50005")
+        self.assertEqual(res["mLabelTrunc"], "Correlation links (capped at 50,000)")
+        self.assertEqual(res["mLabelNormal"], "Correlation links")
+        expected_cap = "Correlation links capped at 50,000 per run. 228,130 candidate links were skipped."
+        self.assertEqual(res["alertMsg"], expected_cap)
+        self.assertIn("Correlation links (capped at 50,000)", res["summaryText"])
+        self.assertIn(expected_cap, res["summaryText"])
+        self.assertIn("Correlation links", res["summaryUncappedText"])
+        self.assertNotIn("capped at 50,000", res["summaryUncappedText"])
 
 
 if __name__ == "__main__":

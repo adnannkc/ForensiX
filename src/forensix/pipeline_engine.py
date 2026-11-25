@@ -739,8 +739,8 @@ class InvestigationPipeline:
             st8_warnings: List[str] = []
             if corr_truncated:
                 cap_msg = (
-                    f"Correlation links capped at {DEFAULT_MAX_CORRELATIONS:,} per run "
-                    f"(truncated; {corr_skipped:,} candidate links skipped)."
+                    f"Correlation links capped at {DEFAULT_MAX_CORRELATIONS:,} per run. "
+                    f"{corr_skipped:,} candidate links were skipped."
                 )
                 st8_warnings.append(cap_msg)
                 report_warnings.append(cap_msg)

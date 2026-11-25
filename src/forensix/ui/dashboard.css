@@ -1160,6 +1160,13 @@ body {
   margin-bottom: 2rem;
 }
 
+.cases-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
 .case-id-cell {
   font-family: var(--font-mono);
   font-weight: 600;

@@ -374,19 +374,21 @@ class TestPipelineEngine(unittest.TestCase):
         report_json = json.loads(report_json_path.read_text(encoding="utf-8"))
         self.assertTrue(report_json["details"]["correlations_truncated"])
         self.assertEqual(report_json["details"]["correlation_cap"], DEFAULT_MAX_CORRELATIONS)
-        self.assertGreater(report_json["details"]["correlations_skipped"], 0)
+        skipped = report_json["details"]["correlations_skipped"]
+        self.assertGreater(skipped, 0)
+        expected_cap = f"Correlation links capped at 50,000 per run. {skipped:,} candidate links were skipped."
         warnings_text = " ".join(report_json["limitations"]["warnings"])
-        self.assertIn("capped at 50,000", warnings_text)
+        self.assertIn(expected_cap, warnings_text)
 
         html_text = report_html_path.read_text(encoding="utf-8")
-        self.assertIn("capped at 50,000", html_text)
+        self.assertIn(expected_cap, html_text)
 
         registry = DashboardReportRegistry()
         rep_id = registry.register_file(report_json_path)
         view = registry.get_report_view(rep_id)
         self.assertIsNotNone(view)
         assert view is not None
-        self.assertTrue(any("capped at 50,000" in w for w in view["warnings"]))
+        self.assertIn(expected_cap, view["warnings"])
 
 
 if __name__ == "__main__":

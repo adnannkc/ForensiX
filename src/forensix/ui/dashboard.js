@@ -519,6 +519,18 @@
   // ---------------------------------------------------------------------------
   // View 1: Overview Rendering
   // ---------------------------------------------------------------------------
+  function formatCapSentence(capVal, skipVal) {
+    const capNum = Number(capVal !== undefined && capVal !== null ? capVal : 50000);
+    const skipNum = Number(skipVal !== undefined && skipVal !== null ? skipVal : 0);
+    return (
+      "Correlation links capped at " +
+      capNum.toLocaleString("en-US") +
+      " per run. " +
+      skipNum.toLocaleString("en-US") +
+      " candidate links were skipped."
+    );
+  }
+
   function renderOverview() {
     if (views.error) views.error.classList.add("hidden");
     if (views.explorer) views.explorer.classList.add("hidden");
@@ -528,27 +540,50 @@
     // 1. Metrics tally
     const totalReports = state.reports.length;
     const schemasSet = new Set();
+    let totalArtifacts = 0;
     let totalEvents = 0;
     let totalDetections = 0;
+    let anyTruncated = false;
+    let truncatedCap = 50000;
 
     state.reports.forEach(function (r) {
       if (r.report_type) schemasSet.add(r.report_type);
       if (r.counts) {
         const c = r.counts;
-        totalEvents += (c.artifact_count || 0) + (c.event_count || 0) + (c.audit_event_count || 0);
+        totalArtifacts += c.artifact_count || 0;
+        totalEvents += c.event_count || 0;
         totalDetections += (c.detection_count || 0) + (c.correlation_count || 0);
+      }
+      if (r.correlations_truncated) {
+        anyTruncated = true;
+        if (r.correlation_cap !== undefined && r.correlation_cap !== null) {
+          truncatedCap = r.correlation_cap;
+        }
+      } else if (Array.isArray(r.warnings)) {
+        const hasCapWarn = r.warnings.some(function (w) {
+          return typeof w === "string" && w.indexOf("Correlation links capped at") !== -1;
+        });
+        if (hasCapWarn) anyTruncated = true;
       }
     });
 
     const mTotal = document.getElementById("metric-total-reports");
     const mSchemas = document.getElementById("metric-active-schemas");
+    const mArtifacts = document.getElementById("metric-total-artifacts");
     const mEvents = document.getElementById("metric-total-events");
     const mDetections = document.getElementById("metric-total-detections");
+    const mDetectionsLabel = document.getElementById("metric-detections-label");
 
     if (mTotal) mTotal.textContent = totalReports;
     if (mSchemas) mSchemas.textContent = schemasSet.size;
+    if (mArtifacts) mArtifacts.textContent = totalArtifacts;
     if (mEvents) mEvents.textContent = totalEvents;
     if (mDetections) mDetections.textContent = totalDetections;
+    if (mDetectionsLabel) {
+      mDetectionsLabel.textContent = anyTruncated
+        ? "Correlation links (capped at " + Number(truncatedCap).toLocaleString("en-US") + ")"
+        : "Correlation links";
+    }
 
     // 2. Empty state check
     if (totalReports === 0) {
@@ -868,11 +903,7 @@
 
     const details = rawData && rawData.details ? rawData.details : null;
     if (details && details.correlations_truncated) {
-      const capVal = details.correlation_cap !== undefined ? details.correlation_cap : 50000;
-      const skipVal = details.correlations_skipped !== undefined ? details.correlations_skipped : 0;
-      showAlert(
-        "Correlation links capped at " + capVal + " (truncated; " + skipVal + " candidate links skipped)."
-      );
+      showAlert(formatCapSentence(details.correlation_cap, details.correlations_skipped));
     } else if (report && Array.isArray(report.warnings) && report.warnings.length > 0) {
       const truncWarn = report.warnings.find(function (w) {
         return typeof w === "string" && w.toLowerCase().indexOf("capped") !== -1;
@@ -938,16 +969,19 @@
 
     const counts = report && report.counts ? report.counts : {};
     const details = rawData && rawData.details ? rawData.details : null;
-    let corrDesc = "Discovered incident correlation links";
-    if (details && details.correlations_truncated) {
-      const capVal = details.correlation_cap !== undefined ? details.correlation_cap : 50000;
-      const skipVal = details.correlations_skipped !== undefined ? details.correlations_skipped : 0;
-      corrDesc = "Truncated at " + capVal + " cap (" + skipVal + " candidate links skipped)";
-    }
+    const isTruncated = Boolean(details && details.correlations_truncated);
+    const capVal = details && details.correlation_cap !== undefined ? details.correlation_cap : 50000;
+    const skipVal = details && details.correlations_skipped !== undefined ? details.correlations_skipped : 0;
+    const corrTitle = isTruncated
+      ? "Correlation links (capped at " + Number(capVal).toLocaleString("en-US") + ")"
+      : "Correlation links";
+    const corrDesc = isTruncated
+      ? formatCapSentence(capVal, skipVal)
+      : "Discovered incident correlation links";
     const metricCards = [
       { title: "Artifacts Analyzed", num: counts.artifact_count || 0, desc: "Total forensic artifacts processed" },
       { title: "Timeline Events", num: counts.event_count || 0, desc: "Chronologically reconstructed events" },
-      { title: "Correlations Identified", num: counts.correlation_count || 0, desc: corrDesc },
+      { title: corrTitle, num: counts.correlation_count || 0, desc: corrDesc },
       { title: "Detection Results", num: counts.detection_count || 0, desc: "Evaluated detection rule assertions" },
       { title: "Matched Detections", num: counts.matched_detection_count || 0, desc: "Positive detection rule matches" },
       { title: "Audit Log Records", num: counts.audit_event_count || 0, desc: "Verified pipeline execution audit events" },

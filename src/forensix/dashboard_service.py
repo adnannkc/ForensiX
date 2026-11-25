@@ -1665,17 +1665,24 @@ class DashboardReportRegistry:
         result: List[Dict[str, Any]] = []
         for rep_id in sorted(self._reports.keys()):
             report = self._reports[rep_id]
-            result.append(
-                {
-                    "id": rep_id,
-                    "report_type": report.report_type.value,
-                    "filename": report.source_path.name,
-                    "file_size_bytes": report.file_size_bytes,
-                    "sha256": report.sha256,
-                    "metadata": report.metadata.to_dict(),
-                    "counts": report.counts.to_dict(),
-                }
-            )
+            raw_details = report.raw_data.get("details") if isinstance(report.raw_data, Mapping) else None
+            is_truncated = bool(raw_details.get("correlations_truncated")) if isinstance(raw_details, Mapping) else False
+            cap_val = raw_details.get("correlation_cap") if isinstance(raw_details, Mapping) else None
+            entry: Dict[str, Any] = {
+                "id": rep_id,
+                "report_type": report.report_type.value,
+                "filename": report.source_path.name,
+                "file_size_bytes": report.file_size_bytes,
+                "sha256": report.sha256,
+                "metadata": report.metadata.to_dict(),
+                "counts": report.counts.to_dict(),
+                "warnings": list(report.warnings),
+            }
+            if is_truncated:
+                entry["correlations_truncated"] = True
+                if cap_val is not None:
+                    entry["correlation_cap"] = cap_val
+            result.append(entry)
         return result
 
     def get_report_view(self, report_id: str) -> Optional[Dict[str, Any]]:

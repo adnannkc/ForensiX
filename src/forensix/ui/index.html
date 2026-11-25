@@ -71,12 +71,17 @@
           <div class="metric-detail" id="metric-schemas-detail">Across 6 supported types</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Analyzed Artifacts &amp; Events</div>
-          <div class="metric-value" id="metric-total-events">0</div>
-          <div class="metric-detail" id="metric-events-detail">Artifacts, events &amp; audit records</div>
+          <div class="metric-label">Artifacts analyzed</div>
+          <div class="metric-value" id="metric-total-artifacts">0</div>
+          <div class="metric-detail" id="metric-artifacts-detail">Host, network &amp; memory artifacts</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Detections &amp; Correlations</div>
+          <div class="metric-label">Timeline events</div>
+          <div class="metric-value" id="metric-total-events">0</div>
+          <div class="metric-detail" id="metric-events-detail">Chronologically reconstructed events</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" id="metric-detections-label">Correlation links</div>
           <div class="metric-value" id="metric-total-detections">0</div>
           <div class="metric-detail" id="metric-detections-detail">Observed rule matches &amp; correlations</div>
         </div>
@@ -113,6 +118,7 @@
 
       <!-- Cases Overview Section -->
       <div id="cases-section" class="cases-section">
+        <h2 class="cases-heading">Cases</h2>
         <div class="table-container" id="cases-table-container">
           <table class="data-table" id="table-cases">
             <thead>

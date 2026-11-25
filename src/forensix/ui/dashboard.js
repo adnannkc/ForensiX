@@ -85,6 +85,7 @@
     error: document.getElementById("error-state"),
     empty: document.getElementById("empty-state"),
     tableContainer: document.getElementById("reports-table-container"),
+    casesSection: document.getElementById("cases-section"),
     alertBanner: document.getElementById("alert-banner"),
     alertMessage: document.getElementById("alert-message"),
   };
@@ -553,14 +554,151 @@
     if (totalReports === 0) {
       if (views.empty) views.empty.classList.remove("hidden");
       if (views.tableContainer) views.tableContainer.classList.add("hidden");
+      if (views.casesSection) views.casesSection.classList.add("hidden");
       return;
     }
 
     if (views.empty) views.empty.classList.add("hidden");
     if (views.tableContainer) views.tableContainer.classList.remove("hidden");
+    if (views.casesSection) views.casesSection.classList.remove("hidden");
 
-    // 3. Render Table
+    // 3. Render Tables
+    renderCaseOverview(state.reports);
     renderReportsTable();
+  }
+
+  function pickPrimaryReport(reports) {
+    if (!reports || reports.length === 0) return null;
+    const v9 = reports.find(function (r) {
+      return r.report_type === "schema_8_0";
+    });
+    if (v9) return v9;
+
+    let best = reports[0];
+    let maxEvents = (best.counts && best.counts.event_count) || 0;
+    for (let i = 1; i < reports.length; i++) {
+      const r = reports[i];
+      const ev = (r.counts && r.counts.event_count) || 0;
+      if (ev > maxEvents) {
+        maxEvents = ev;
+        best = r;
+      }
+    }
+    return best;
+  }
+
+  function renderCaseOverview(reports) {
+    const tbody = document.getElementById("cases-table-body");
+    const section = document.getElementById("cases-section");
+    if (!tbody) return;
+    clearNode(tbody);
+
+    const reportList = Array.isArray(reports) ? reports : [];
+    if (reportList.length === 0) {
+      if (section) section.classList.add("hidden");
+      return;
+    }
+    if (section) section.classList.remove("hidden");
+
+    const caseGroups = new Map();
+    const standaloneReports = [];
+
+    reportList.forEach(function (r) {
+      const cid = r.metadata && r.metadata.case_id ? String(r.metadata.case_id).trim() : "";
+      if (cid) {
+        if (!caseGroups.has(cid)) {
+          caseGroups.set(cid, []);
+        }
+        caseGroups.get(cid).push(r);
+      } else {
+        standaloneReports.push(r);
+      }
+    });
+
+    const sortedCaseIds = Array.from(caseGroups.keys()).sort();
+
+    sortedCaseIds.forEach(function (caseId) {
+      const group = caseGroups.get(caseId);
+      const primary = pickPrimaryReport(group);
+      const tr = el("tr");
+
+      // 1. Case
+      const tdCase = el("td", "case-id-cell", caseId);
+      tr.appendChild(tdCase);
+
+      // 2. Name
+      const caseName = (primary && primary.metadata && primary.metadata.case_name) ? primary.metadata.case_name : "—";
+      const tdName = el("td", "case-name-cell", caseName);
+      tr.appendChild(tdName);
+
+      // 3. Reports
+      const otherCount = group.length - 1;
+      const tdReports = el("td", "case-reports-cell", "Other reports: " + otherCount);
+      tr.appendChild(tdReports);
+
+      // 4. Primary Report
+      const primaryName = (primary && (primary.filename || primary.id)) ? (primary.filename || primary.id) : "—";
+      const tdPrimary = el("td", "primary-report-cell", primaryName);
+      tr.appendChild(tdPrimary);
+
+      // 5. Observed Timeline Events
+      const evCount = (primary && primary.counts && primary.counts.event_count !== undefined) ? String(primary.counts.event_count) : "0";
+      const tdEvents = el("td", null, evCount);
+      tr.appendChild(tdEvents);
+
+      // 6. Observed Host Artifacts
+      const artCount = (primary && primary.counts && primary.counts.artifact_count !== undefined) ? String(primary.counts.artifact_count) : "0";
+      const tdArtifacts = el("td", null, artCount);
+      tr.appendChild(tdArtifacts);
+
+      // 7. Rule Matches
+      let ruleMatches = "0";
+      if (primary && primary.counts) {
+        if (primary.counts.matched_detection_count !== undefined) {
+          ruleMatches = String(primary.counts.matched_detection_count);
+        } else if (primary.counts.detection_count !== undefined) {
+          ruleMatches = String(primary.counts.detection_count);
+        }
+      }
+      const tdMatches = el("td", null, ruleMatches);
+      tr.appendChild(tdMatches);
+
+      tbody.appendChild(tr);
+    });
+
+    if (standaloneReports.length > 0) {
+      const tr = el("tr", "row-standalone");
+
+      // 1. Case
+      const tdCase = el("td", "case-id-cell", "No case ID (standalone reports)");
+      tr.appendChild(tdCase);
+
+      // 2. Name
+      const tdName = el("td", "text-muted", "—");
+      tr.appendChild(tdName);
+
+      // 3. Reports
+      const tdReports = el("td", "case-reports-cell", "Standalone reports: " + standaloneReports.length);
+      tr.appendChild(tdReports);
+
+      // 4. Primary Report
+      const tdPrimary = el("td", "text-muted", "—");
+      tr.appendChild(tdPrimary);
+
+      // 5. Observed Timeline Events (no summed totals)
+      const tdEvents = el("td", "text-muted", "—");
+      tr.appendChild(tdEvents);
+
+      // 6. Observed Host Artifacts (no summed totals)
+      const tdArtifacts = el("td", "text-muted", "—");
+      tr.appendChild(tdArtifacts);
+
+      // 7. Rule Matches (no summed totals)
+      const tdMatches = el("td", "text-muted", "—");
+      tr.appendChild(tdMatches);
+
+      tbody.appendChild(tr);
+    }
   }
 
   function getFilteredReports() {

@@ -1154,3 +1154,33 @@ body {
   color: var(--text-secondary);
   line-height: 1.5;
 }
+
+/* Case Overview Section */
+.cases-section {
+  margin-bottom: 2rem;
+}
+
+.case-id-cell {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.case-name-cell {
+  color: var(--text-primary);
+}
+
+.case-reports-cell {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.primary-report-cell {
+  font-family: var(--font-mono);
+  color: var(--text-code);
+  font-size: 0.8rem;
+}
+
+.row-standalone td {
+  font-style: italic;
+}

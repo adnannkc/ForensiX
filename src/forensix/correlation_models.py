@@ -576,13 +576,23 @@ class CorrelationCollection:
         correlations: Immutable tuple of Correlation instances.
         total_correlations: Count of correlations in this collection.
         relationship_counts: Immutable tuple of (relationship_type, count) pairs.
+        truncated: True if correlation generation hit max_correlations and stopped early.
+        skipped_candidates: Number of remaining candidate correlation links skipped after truncation.
     """
 
     correlations: Tuple[Correlation, ...]
     total_correlations: int
     relationship_counts: Tuple[Tuple[str, int], ...]
+    truncated: bool = False
+    skipped_candidates: int = 0
 
-    def __init__(self, correlations: Sequence[Correlation] = ()) -> None:
+    def __init__(
+        self,
+        correlations: Sequence[Correlation] = (),
+        *,
+        truncated: bool = False,
+        skipped_candidates: int = 0,
+    ) -> None:
         """Construct an immutable CorrelationCollection from a sequence of Correlation objects."""
         if correlations is None:
             correlations_seq: Sequence[Correlation] = ()
@@ -592,6 +602,15 @@ class CorrelationCollection:
             raise TypeError(
                 f"correlations must be a sequence of Correlation objects, got {type(correlations).__name__}"
             )
+
+        if not isinstance(truncated, bool):
+            raise TypeError(f"truncated must be a bool, got {type(truncated).__name__}")
+        if isinstance(skipped_candidates, bool) or not isinstance(skipped_candidates, int):
+            raise TypeError(
+                f"skipped_candidates must be an int, got {type(skipped_candidates).__name__}"
+            )
+        if skipped_candidates < 0:
+            raise ValueError(f"skipped_candidates must be >= 0, got {skipped_candidates}")
 
         validated: List[Correlation] = []
         counts: Dict[str, int] = {}
@@ -607,6 +626,8 @@ class CorrelationCollection:
         object.__setattr__(self, "correlations", tuple(validated))
         object.__setattr__(self, "total_correlations", len(validated))
         object.__setattr__(self, "relationship_counts", tuple(sorted(counts.items())))
+        object.__setattr__(self, "truncated", truncated)
+        object.__setattr__(self, "skipped_candidates", skipped_candidates)
 
     def __len__(self) -> int:
         return self.total_correlations
@@ -626,6 +647,8 @@ class CorrelationCollection:
         return {
             "total_correlations": self.total_correlations,
             "relationship_counts": dict(self.relationship_counts),
+            "truncated": self.truncated,
+            "skipped_candidates": self.skipped_candidates,
         }
 
     def to_dict(self) -> Dict[str, Any]:

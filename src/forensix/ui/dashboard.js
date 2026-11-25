@@ -858,13 +858,27 @@
     }
 
     // 2. Tab Content Rendering
-    renderMetadataTab(report);
-    renderSummaryTab(report);
     const rawData = state.activeReportDetails ? state.activeReportDetails.raw_data : null;
+    renderMetadataTab(report);
+    renderSummaryTab(report, rawData);
     renderRawTab(rawData);
     renderTimelineTab(rawData);
     renderNetworkTab(rawData);
     renderUsersTab(rawData);
+
+    const details = rawData && rawData.details ? rawData.details : null;
+    if (details && details.correlations_truncated) {
+      const capVal = details.correlation_cap !== undefined ? details.correlation_cap : 50000;
+      const skipVal = details.correlations_skipped !== undefined ? details.correlations_skipped : 0;
+      showAlert(
+        "Correlation links capped at " + capVal + " (truncated; " + skipVal + " candidate links skipped)."
+      );
+    } else if (report && Array.isArray(report.warnings) && report.warnings.length > 0) {
+      const truncWarn = report.warnings.find(function (w) {
+        return typeof w === "string" && w.toLowerCase().indexOf("capped") !== -1;
+      });
+      if (truncWarn) showAlert(truncWarn);
+    }
 
     // Activate current tab
     switchTab(state.activeTab || "tab-metadata");
@@ -917,16 +931,23 @@
     });
   }
 
-  function renderSummaryTab(report) {
+  function renderSummaryTab(report, rawData) {
     const grid = document.getElementById("summary-counts-grid");
     if (!grid) return;
     clearNode(grid);
 
     const counts = report && report.counts ? report.counts : {};
+    const details = rawData && rawData.details ? rawData.details : null;
+    let corrDesc = "Discovered incident correlation links";
+    if (details && details.correlations_truncated) {
+      const capVal = details.correlation_cap !== undefined ? details.correlation_cap : 50000;
+      const skipVal = details.correlations_skipped !== undefined ? details.correlations_skipped : 0;
+      corrDesc = "Truncated at " + capVal + " cap (" + skipVal + " candidate links skipped)";
+    }
     const metricCards = [
       { title: "Artifacts Analyzed", num: counts.artifact_count || 0, desc: "Total forensic artifacts processed" },
       { title: "Timeline Events", num: counts.event_count || 0, desc: "Chronologically reconstructed events" },
-      { title: "Correlations Identified", num: counts.correlation_count || 0, desc: "Discovered incident correlation links" },
+      { title: "Correlations Identified", num: counts.correlation_count || 0, desc: corrDesc },
       { title: "Detection Results", num: counts.detection_count || 0, desc: "Evaluated detection rule assertions" },
       { title: "Matched Detections", num: counts.matched_detection_count || 0, desc: "Positive detection rule matches" },
       { title: "Audit Log Records", num: counts.audit_event_count || 0, desc: "Verified pipeline execution audit events" },

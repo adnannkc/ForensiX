@@ -718,6 +718,14 @@ def _extract_metadata_and_counts(
         if not isinstance(fs, (dict, Mapping)):
             fs = {}
 
+        lim = data.get("limitations", {})
+        if isinstance(lim, (dict, Mapping)):
+            lim_warnings = lim.get("warnings")
+            if isinstance(lim_warnings, (list, tuple)):
+                for w in lim_warnings:
+                    if isinstance(w, str) and w.strip():
+                        warnings.append(w.strip())
+
         artifact_count = fs.get("total_host_artifacts", 0) if isinstance(fs.get("total_host_artifacts"), int) else 0
         event_count = fs.get("total_timeline_events", 0) if isinstance(fs.get("total_timeline_events"), int) else 0
         correlation_count = fs.get("total_correlations", 0) if isinstance(fs.get("total_correlations"), int) else 0

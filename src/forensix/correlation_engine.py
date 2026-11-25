@@ -21,8 +21,9 @@ Core Principles:
 - Deep immutability: Input events are untouched; output is an immutable CorrelationCollection.
 """
 
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import (
     Any,
@@ -52,6 +53,11 @@ from forensix.timeline_reconstruction import ReconstructedTimeline
 
 # Default correlation window: 300.0 seconds (5 minutes)
 DEFAULT_TIME_WINDOW_SECONDS: float = 300.0
+
+# Default per-run cap on materialized Correlation links
+DEFAULT_MAX_CORRELATIONS: int = 50000
+
+_UNSET = object()
 
 # Supported relationship types set for fast validation
 ALL_RELATIONSHIP_TYPES: Tuple[CorrelationType, ...] = (
@@ -274,19 +280,19 @@ class CorrelationConfig:
     Attributes:
         time_window_seconds: Maximum delta in seconds for temporal relationships (inclusive).
         relationship_types: Explicit tuple of relationship types to evaluate.
-        max_correlations: Optional maximum number of correlations to discover.
+        max_correlations: Optional maximum number of correlations to discover (default: 50000).
     """
 
     time_window_seconds: float = DEFAULT_TIME_WINDOW_SECONDS
     relationship_types: Tuple[CorrelationType, ...] = ALL_RELATIONSHIP_TYPES
-    max_correlations: Optional[int] = None
+    max_correlations: Optional[int] = DEFAULT_MAX_CORRELATIONS
 
     def __init__(
         self,
         *,
         time_window_seconds: float = DEFAULT_TIME_WINDOW_SECONDS,
         relationship_types: Optional[Sequence[Union[CorrelationType, str]]] = None,
-        max_correlations: Optional[int] = None,
+        max_correlations: Any = _UNSET,
     ) -> None:
         if isinstance(time_window_seconds, bool) or not isinstance(time_window_seconds, (int, float)):
             raise TypeError(
@@ -321,17 +327,18 @@ class CorrelationConfig:
                 f"relationship_types must be a sequence of CorrelationType or str, got {type(relationship_types).__name__}"
             )
 
-        if max_correlations is not None:
-            if isinstance(max_correlations, bool) or not isinstance(max_correlations, int):
+        resolved_max = DEFAULT_MAX_CORRELATIONS if max_correlations is _UNSET else max_correlations
+        if resolved_max is not None:
+            if isinstance(resolved_max, bool) or not isinstance(resolved_max, int):
                 raise TypeError(
-                    f"max_correlations must be an integer, got {type(max_correlations).__name__}"
+                    f"max_correlations must be an integer, got {type(resolved_max).__name__}"
                 )
-            if max_correlations < 1:
-                raise ValueError(f"max_correlations must be >= 1, got {max_correlations}")
+            if resolved_max < 1:
+                raise ValueError(f"max_correlations must be >= 1, got {resolved_max}")
 
         object.__setattr__(self, "time_window_seconds", float(time_window_seconds))
         object.__setattr__(self, "relationship_types", validated_types)
-        object.__setattr__(self, "max_correlations", max_correlations)
+        object.__setattr__(self, "max_correlations", resolved_max)
 
 
 def correlation_sort_key(corr: Correlation) -> Tuple[Any, ...]:
@@ -370,6 +377,122 @@ def correlation_sort_key(corr: Correlation) -> Tuple[Any, ...]:
     )
 
 
+@dataclass(frozen=True)
+class _PreparedEvent:
+    """Pre-extracted event fields for O(1) per-candidate correlation checks."""
+
+    index: int
+    event: TimelineEvent
+    user: Optional[str]
+    source: Optional[str]
+    path: Optional[str]
+    session: Optional[str]
+    is_auth: bool
+    is_priv: bool
+    ts_kind: str  # "aware", "naive", or "none"
+    ts_cmp: Optional[datetime]
+
+
+def _prepare_event(index: int, event: TimelineEvent) -> _PreparedEvent:
+    """Extract all correlation identities, flags, and normalized timestamp once per event."""
+    attr_map: Dict[str, Any] = dict(event.attributes) if event.attributes else {}
+
+    # User identity
+    user_val = attr_map.get("username")
+    if user_val is None:
+        user_val = attr_map.get("user")
+    if user_val is None:
+        user_val = attr_map.get("account")
+    user = user_val.strip() if isinstance(user_val, str) and user_val.strip() else None
+
+    # Source identity
+    src_val = attr_map.get("source_ip")
+    if src_val is None:
+        src_val = attr_map.get("src_ip")
+    if src_val is None:
+        src_val = attr_map.get("hostname")
+    if src_val is None:
+        src_val = attr_map.get("source_host")
+    source = src_val.strip() if isinstance(src_val, str) and src_val.strip() else None
+
+    # Normalized path identity
+    path_val = attr_map.get("path")
+    if path_val is None:
+        path_val = attr_map.get("target_path")
+    if path_val is None:
+        path_val = attr_map.get("file_path")
+    if path_val is None and event.source_path:
+        path_val = event.source_path
+    norm_path: Optional[str] = None
+    if isinstance(path_val, (str, Path, PurePosixPath)):
+        raw_str = str(path_val).strip()
+        if raw_str:
+            norm = normalize_relative_path(raw_str)
+            if norm:
+                norm_path = norm
+
+    # Session identity
+    sess_val = attr_map.get("session_id")
+    if sess_val is None:
+        sess_val = attr_map.get("session")
+    session: Optional[str] = None
+    if isinstance(sess_val, str):
+        cleaned_sess = sess_val.strip()
+        if cleaned_sess:
+            session = cleaned_sess
+    elif isinstance(sess_val, int) and not isinstance(sess_val, bool):
+        session = str(sess_val)
+
+    # Auth / privilege flags
+    cat_str = event.category.value if hasattr(event.category, "value") else str(event.category)
+    ev_type_lower = event.event_type.lower()
+    if cat_str.lower() == "authentication":
+        status = attr_map.get("status")
+        is_auth = not (isinstance(status, str) and status.upper() in ("FAILURE", "FAILED"))
+    else:
+        is_auth = ev_type_lower in AUTH_SUCCESS_EVENT_TYPES
+
+    cmd = attr_map.get("command")
+    is_priv = (
+        ev_type_lower in PRIVILEGE_EVENT_TYPES
+        or "sudo" in ev_type_lower
+        or "privilege" in ev_type_lower
+        or bool(cmd and "sudo" in str(cmd).lower())
+    )
+
+    # Timestamp classification
+    ts = event.timestamp
+    if ts is None:
+        ts_kind = "none"
+        ts_cmp = None
+    elif ts.tzinfo is not None and ts.tzinfo.utcoffset(ts) is not None:
+        ts_kind = "aware"
+        ts_cmp = ts.astimezone(timezone.utc)
+    else:
+        ts_kind = "naive"
+        ts_cmp = ts
+
+    return _PreparedEvent(
+        index=index,
+        event=event,
+        user=user,
+        source=source,
+        path=norm_path,
+        session=session,
+        is_auth=is_auth,
+        is_priv=is_priv,
+        ts_kind=ts_kind,
+        ts_cmp=ts_cmp,
+    )
+
+
+def _pair_delta(p1: _PreparedEvent, p2: _PreparedEvent) -> Optional[float]:
+    """Compute exact absolute delta in seconds using pre-classified timestamps."""
+    if p1.ts_cmp is None or p2.ts_cmp is None or p1.ts_kind != p2.ts_kind:
+        return None
+    return abs((p2.ts_cmp - p1.ts_cmp).total_seconds())
+
+
 class CorrelationEngine:
     """
     Deterministic correlation discovery engine for ForensiX timeline events.
@@ -384,7 +507,7 @@ class CorrelationEngine:
         *,
         time_window_seconds: Optional[float] = None,
         relationship_types: Optional[Sequence[Union[CorrelationType, str]]] = None,
-        max_correlations: Optional[int] = None,
+        max_correlations: Any = _UNSET,
     ) -> None:
         if config is not None:
             if not isinstance(config, CorrelationConfig):
@@ -396,7 +519,7 @@ class CorrelationEngine:
                 kwargs["time_window_seconds"] = time_window_seconds
             if relationship_types is not None:
                 kwargs["relationship_types"] = relationship_types
-            if max_correlations is not None:
+            if max_correlations is not _UNSET:
                 kwargs["max_correlations"] = max_correlations
             self.config = CorrelationConfig(**kwargs)
 
@@ -436,200 +559,361 @@ class CorrelationEngine:
 
         active_types = set(self.config.relationship_types)
         window = self.config.time_window_seconds
+        window_td = timedelta(seconds=window)
+        limit = self.config.max_correlations
+
+        prepared = [_prepare_event(idx, ev) for idx, ev in enumerate(events)]
+
         discovered: List[Correlation] = []
-        seen_pairs: Set[Tuple[str, Tuple[str, ...]]] = set()
+        seen_pairs: Set[Tuple[str, Tuple[str, str]]] = set()
+        truncated = False
+        skipped_candidates = 0
 
-        for i in range(num_events):
-            e1 = events[i]
-            for j in range(i + 1, num_events):
-                e2 = events[j]
+        def _pair_key(e1: TimelineEvent, e2: TimelineEvent) -> Tuple[str, str]:
+            id1 = e1.event_id
+            id2 = e2.event_id
+            return (id1, id2) if id1 <= id2 else (id2, id1)
 
-                # Pair identity (order-independent event pair for duplicate prevention)
-                pair_key = tuple(sorted([e1.event_id, e2.event_id]))
+        def _try_emit(
+            rel_type: CorrelationType,
+            e1: TimelineEvent,
+            e2: TimelineEvent,
+            description: str,
+            delta: Optional[float],
+            attributes: Dict[str, Any],
+        ) -> bool:
+            """Emit correlation if unseen and under cap. Returns False if cap blocked emission."""
+            nonlocal truncated, skipped_candidates
+            dedup_key = (rel_type.value, _pair_key(e1, e2))
+            if dedup_key in seen_pairs:
+                return True
+            if limit is not None and len(discovered) >= limit:
+                truncated = True
+                skipped_candidates += 1
+                return False
+            corr = create_correlation(
+                relationship_type=rel_type,
+                event_ids=[e1, e2],
+                description=description,
+                time_delta_seconds=delta,
+                attributes=attributes,
+            )
+            discovered.append(corr)
+            seen_pairs.add(dedup_key)
+            return True
 
-                # Compute temporal delta between e1 and e2 if both have timestamps
-                delta = compute_timestamp_delta(e1.timestamp, e2.timestamp)
+        def _process_windowed_seq(
+            seq: List[int],
+            rel_type: CorrelationType,
+            make_desc_and_attrs: Any,
+        ) -> None:
+            nonlocal truncated, skipped_candidates
+            m = len(seq)
+            if m < 2:
+                return
+            hi = 0
+            for pos1 in range(m):
+                i = seq[pos1]
+                p1 = prepared[i]
+                t1 = p1.ts_cmp
+                assert t1 is not None
+                if hi <= pos1:
+                    hi = pos1 + 1
+                limit_ts = t1 + window_td
+                while hi < m and prepared[seq[hi]].ts_cmp <= limit_ts:  # type: ignore[operator]
+                    hi += 1
 
-                # 1. TEMPORAL relationship
-                if CorrelationType.TEMPORAL in active_types:
-                    dedup_key = (CorrelationType.TEMPORAL.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        if delta is not None and delta <= window:
-                            corr = create_correlation(
-                                relationship_type=CorrelationType.TEMPORAL,
-                                event_ids=[e1, e2],
-                                description=f"Events occurred within {delta:.1f}s (configured window: {window:.1f}s)",
-                                time_delta_seconds=delta,
-                                attributes={"delta_seconds": delta, "window_seconds": window},
-                            )
-                            discovered.append(corr)
-                            seen_pairs.add(dedup_key)
+                if limit is not None and len(discovered) >= limit:
+                    truncated = True
+                    skipped_candidates += hi - pos1 - 1
+                    continue
 
-                # 2. SAME_USER relationship
-                if CorrelationType.SAME_USER in active_types:
-                    dedup_key = (CorrelationType.SAME_USER.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        u1 = extract_user_identity(e1)
-                        u2 = extract_user_identity(e2)
-                        if u1 and u2 and u1 == u2:
-                            # If events have timestamps and a time window is set, enforce the window
-                            if delta is None or delta <= window:
-                                corr = create_correlation(
-                                    relationship_type=CorrelationType.SAME_USER,
-                                    event_ids=[e1, e2],
-                                    description=f"Events share the same user identity: '{u1}'",
-                                    time_delta_seconds=delta,
-                                    attributes={"user": u1, "delta_seconds": delta},
-                                )
-                                discovered.append(corr)
-                                seen_pairs.add(dedup_key)
+                for pos2 in range(pos1 + 1, hi):
+                    j = seq[pos2]
+                    p2 = prepared[j]
+                    if p1.event.event_id == p2.event.event_id:
+                        continue
+                    if limit is not None and len(discovered) >= limit:
+                        truncated = True
+                        skipped_candidates += hi - pos2
+                        break
+                    delta = abs((p2.ts_cmp - t1).total_seconds())  # type: ignore[operator]
+                    desc, attrs = make_desc_and_attrs(p1, p2, delta)
+                    ordered = (p1.event, p2.event) if p1.index < p2.index else (p2.event, p1.event)
+                    _try_emit(rel_type, ordered[0], ordered[1], desc, delta, attrs)
 
-                # 3. SAME_SOURCE relationship
-                if CorrelationType.SAME_SOURCE in active_types:
-                    dedup_key = (CorrelationType.SAME_SOURCE.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        s1 = extract_source_identity(e1)
-                        s2 = extract_source_identity(e2)
-                        if s1 and s2 and s1 == s2:
-                            if delta is None or delta <= window:
-                                corr = create_correlation(
-                                    relationship_type=CorrelationType.SAME_SOURCE,
-                                    event_ids=[e1, e2],
-                                    description=f"Events share the same source identity: '{s1}'",
-                                    time_delta_seconds=delta,
-                                    attributes={"source": s1, "delta_seconds": delta},
-                                )
-                                discovered.append(corr)
-                                seen_pairs.add(dedup_key)
+        def _process_cross_lists(
+            list_a: List[int],
+            list_b: List[int],
+            rel_type: CorrelationType,
+            make_desc_and_attrs: Any,
+        ) -> None:
+            nonlocal truncated, skipped_candidates
+            if not list_a or not list_b:
+                return
+            if limit is not None and len(discovered) >= limit:
+                truncated = True
+                skipped_candidates += len(list_a) * len(list_b)
+                return
+            total_b = len(list_b)
+            for idx_a, i in enumerate(list_a):
+                p1 = prepared[i]
+                if limit is not None and len(discovered) >= limit:
+                    truncated = True
+                    skipped_candidates += (len(list_a) - idx_a) * total_b
+                    return
+                for idx_b, j in enumerate(list_b):
+                    p2 = prepared[j]
+                    if p1.event.event_id == p2.event.event_id:
+                        continue
+                    if limit is not None and len(discovered) >= limit:
+                        truncated = True
+                        skipped_candidates += (total_b - idx_b) + (len(list_a) - idx_a - 1) * total_b
+                        return
+                    desc, attrs = make_desc_and_attrs(p1, p2, None)
+                    ordered = (p1.event, p2.event) if p1.index < p2.index else (p2.event, p1.event)
+                    _try_emit(rel_type, ordered[0], ordered[1], desc, None, attrs)
 
-                # 4. SAME_PATH relationship
-                if CorrelationType.SAME_PATH in active_types:
-                    dedup_key = (CorrelationType.SAME_PATH.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        p1 = extract_path_identity(e1)
-                        p2 = extract_path_identity(e2)
-                        if p1 and p2 and p1 == p2:
-                            if delta is None or delta <= window:
-                                corr = create_correlation(
-                                    relationship_type=CorrelationType.SAME_PATH,
-                                    event_ids=[e1, e2],
-                                    description=f"Events reference the same normalized path: '{p1}'",
-                                    time_delta_seconds=delta,
-                                    attributes={"path": p1, "delta_seconds": delta},
-                                )
-                                discovered.append(corr)
-                                seen_pairs.add(dedup_key)
+        def _process_unordered_list(
+            seq: List[int],
+            rel_type: CorrelationType,
+            make_desc_and_attrs: Any,
+        ) -> None:
+            nonlocal truncated, skipped_candidates
+            m = len(seq)
+            if m < 2:
+                return
+            if limit is not None and len(discovered) >= limit:
+                truncated = True
+                skipped_candidates += m * (m - 1) // 2
+                return
+            for pos1 in range(m):
+                p1 = prepared[seq[pos1]]
+                if limit is not None and len(discovered) >= limit:
+                    truncated = True
+                    rem = m - pos1
+                    skipped_candidates += rem * (rem - 1) // 2
+                    return
+                for pos2 in range(pos1 + 1, m):
+                    p2 = prepared[seq[pos2]]
+                    if p1.event.event_id == p2.event.event_id:
+                        continue
+                    if limit is not None and len(discovered) >= limit:
+                        truncated = True
+                        rem_tail = m - pos2
+                        rem_after = m - pos1 - 1
+                        skipped_candidates += rem_tail + (rem_after * (rem_after - 1) // 2)
+                        return
+                    desc, attrs = make_desc_and_attrs(p1, p2, None)
+                    ordered = (p1.event, p2.event) if p1.index < p2.index else (p2.event, p1.event)
+                    _try_emit(rel_type, ordered[0], ordered[1], desc, None, attrs)
 
-                # 5. SAME_SESSION relationship
-                if CorrelationType.SAME_SESSION in active_types:
-                    dedup_key = (CorrelationType.SAME_SESSION.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        sess1 = extract_session_identity(e1)
-                        sess2 = extract_session_identity(e2)
-                        if sess1 and sess2 and sess1 == sess2:
-                            if delta is None or delta <= window:
-                                corr = create_correlation(
-                                    relationship_type=CorrelationType.SAME_SESSION,
-                                    event_ids=[e1, e2],
-                                    description=f"Events share the same session identifier: '{sess1}'",
-                                    time_delta_seconds=delta,
-                                    attributes={"session_id": sess1, "delta_seconds": delta},
-                                )
-                                discovered.append(corr)
-                                seen_pairs.add(dedup_key)
+        aware_sorted = sorted(
+            (p.index for p in prepared if p.ts_kind == "aware"),
+            key=lambda idx: (prepared[idx].ts_cmp, idx),  # type: ignore[arg-type]
+        )
+        naive_sorted = sorted(
+            (p.index for p in prepared if p.ts_kind == "naive"),
+            key=lambda idx: (prepared[idx].ts_cmp, idx),  # type: ignore[arg-type]
+        )
 
-                # 6. AUTHENTICATION_PRIVILEGE relationship
-                if CorrelationType.AUTHENTICATION_PRIVILEGE in active_types:
-                    dedup_key = (CorrelationType.AUTHENTICATION_PRIVILEGE.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        # Must have one auth event and one privilege event
-                        auth_first = is_authentication_event(e1) and is_privilege_event(e2)
-                        auth_second = is_authentication_event(e2) and is_privilege_event(e1)
+        # 1. TEMPORAL relationship (sliding time window)
+        if CorrelationType.TEMPORAL in active_types:
+            def _temporal_payload(p1: _PreparedEvent, p2: _PreparedEvent, delta: Optional[float]) -> Tuple[str, Dict[str, Any]]:
+                assert delta is not None
+                return (
+                    f"Events occurred within {delta:.1f}s (configured window: {window:.1f}s)",
+                    {"delta_seconds": delta, "window_seconds": window},
+                )
 
-                        if auth_first or auth_second:
-                            e_auth = e1 if auth_first else e2
-                            e_priv = e2 if auth_first else e1
+            _process_windowed_seq(aware_sorted, CorrelationType.TEMPORAL, _temporal_payload)
+            _process_windowed_seq(naive_sorted, CorrelationType.TEMPORAL, _temporal_payload)
 
-                            # Order requirement: e_auth must occur before or at the same time as e_priv
-                            order_ok = False
-                            if e_auth.timestamp is not None and e_priv.timestamp is not None:
-                                is_ordered = is_chronologically_ordered(e_auth.timestamp, e_priv.timestamp)
-                                if is_ordered is True:
-                                    order_ok = True
-                            elif auth_first:
-                                # When timestamps are missing, preserve reconstructed timeline sequence order
-                                order_ok = True
+        # 2-5. Bucketed attribute relationships
+        def _run_bucketed_relationship(
+            rel_type: CorrelationType,
+            key_getter: Any,
+            make_desc_and_attrs: Any,
+        ) -> None:
+            buckets: Dict[str, List[int]] = {}
+            for p in prepared:
+                key_val = key_getter(p)
+                if key_val:
+                    buckets.setdefault(key_val, []).append(p.index)
 
-                            if order_ok:
-                                # Check user identity compatibility if present on both
-                                u_auth = extract_user_identity(e_auth)
-                                u_priv = extract_user_identity(e_priv)
-                                user_compatible = (u_auth is None or u_priv is None or u_auth == u_priv)
+            for key_val in sorted(buckets.keys()):
+                idxs = buckets[key_val]
+                if len(idxs) < 2:
+                    continue
+                b_aware = sorted(
+                    (idx for idx in idxs if prepared[idx].ts_kind == "aware"),
+                    key=lambda idx: (prepared[idx].ts_cmp, idx),  # type: ignore[arg-type]
+                )
+                b_naive = sorted(
+                    (idx for idx in idxs if prepared[idx].ts_kind == "naive"),
+                    key=lambda idx: (prepared[idx].ts_cmp, idx),  # type: ignore[arg-type]
+                )
+                b_none = [idx for idx in idxs if prepared[idx].ts_kind == "none"]
 
-                                if user_compatible:
-                                    if delta is None or delta <= window:
-                                        target_user = u_auth or u_priv or "unknown"
-                                        desc = (
-                                            f"Observed authentication activity ('{e_auth.event_type}') "
-                                            f"followed by privilege-related activity ('{e_priv.event_type}') "
-                                            f"for user '{target_user}'"
-                                        )
-                                        corr = create_correlation(
-                                            relationship_type=CorrelationType.AUTHENTICATION_PRIVILEGE,
-                                            event_ids=[e_auth, e_priv],
-                                            description=desc,
-                                            time_delta_seconds=delta,
-                                            attributes={
-                                                "user": target_user,
-                                                "auth_event_type": e_auth.event_type,
-                                                "privilege_event_type": e_priv.event_type,
-                                                "delta_seconds": delta,
-                                            },
-                                        )
-                                        discovered.append(corr)
-                                        seen_pairs.add(dedup_key)
+                _process_windowed_seq(b_aware, rel_type, make_desc_and_attrs)
+                _process_windowed_seq(b_naive, rel_type, make_desc_and_attrs)
+                _process_cross_lists(b_aware, b_naive, rel_type, make_desc_and_attrs)
+                _process_cross_lists(b_aware, b_none, rel_type, make_desc_and_attrs)
+                _process_cross_lists(b_naive, b_none, rel_type, make_desc_and_attrs)
+                _process_unordered_list(b_none, rel_type, make_desc_and_attrs)
 
-                # Stop early if max_correlations limit reached
-                if (
-                    self.config.max_correlations is not None
-                    and len(discovered) >= self.config.max_correlations
-                ):
-                    break
-            if (
-                self.config.max_correlations is not None
-                and len(discovered) >= self.config.max_correlations
-            ):
-                break
+        if CorrelationType.SAME_USER in active_types:
+            _run_bucketed_relationship(
+                CorrelationType.SAME_USER,
+                lambda p: p.user,
+                lambda p1, p2, delta: (
+                    f"Events share the same user identity: '{p1.user}'",
+                    {"user": p1.user, "delta_seconds": delta},
+                ),
+            )
+
+        if CorrelationType.SAME_SOURCE in active_types:
+            _run_bucketed_relationship(
+                CorrelationType.SAME_SOURCE,
+                lambda p: p.source,
+                lambda p1, p2, delta: (
+                    f"Events share the same source identity: '{p1.source}'",
+                    {"source": p1.source, "delta_seconds": delta},
+                ),
+            )
+
+        if CorrelationType.SAME_PATH in active_types:
+            _run_bucketed_relationship(
+                CorrelationType.SAME_PATH,
+                lambda p: p.path,
+                lambda p1, p2, delta: (
+                    f"Events reference the same normalized path: '{p1.path}'",
+                    {"path": p1.path, "delta_seconds": delta},
+                ),
+            )
+
+        if CorrelationType.SAME_SESSION in active_types:
+            _run_bucketed_relationship(
+                CorrelationType.SAME_SESSION,
+                lambda p: p.session,
+                lambda p1, p2, delta: (
+                    f"Events share the same session identifier: '{p1.session}'",
+                    {"session_id": p1.session, "delta_seconds": delta},
+                ),
+            )
+
+        # 6. AUTHENTICATION_PRIVILEGE relationship
+        if CorrelationType.AUTHENTICATION_PRIVILEGE in active_types:
+            auth_indices = [p.index for p in prepared if p.is_auth]
+            priv_indices = [p.index for p in prepared if p.is_priv]
+
+            if auth_indices and priv_indices:
+                priv_aware = sorted(
+                    (idx for idx in priv_indices if prepared[idx].ts_kind == "aware"),
+                    key=lambda idx: (prepared[idx].ts_cmp, idx),  # type: ignore[arg-type]
+                )
+                priv_naive = sorted(
+                    (idx for idx in priv_indices if prepared[idx].ts_kind == "naive"),
+                    key=lambda idx: (prepared[idx].ts_cmp, idx),  # type: ignore[arg-type]
+                )
+                priv_none = [idx for idx in priv_indices if prepared[idx].ts_kind == "none"]
+                priv_aware_ts = [prepared[idx].ts_cmp for idx in priv_aware]
+                priv_naive_ts = [prepared[idx].ts_cmp for idx in priv_naive]
+
+                for i_auth in auth_indices:
+                    pa = prepared[i_auth]
+                    candidates: List[int] = []
+                    if pa.ts_kind == "aware":
+                        assert pa.ts_cmp is not None
+                        lo = bisect_left(priv_aware_ts, pa.ts_cmp)  # type: ignore[type-var]
+                        hi = bisect_right(priv_aware_ts, pa.ts_cmp + window_td)  # type: ignore[type-var]
+                        candidates.extend(priv_aware[lo:hi])
+                        candidates.extend(idx for idx in priv_none if i_auth < idx)
+                    elif pa.ts_kind == "naive":
+                        assert pa.ts_cmp is not None
+                        lo = bisect_left(priv_naive_ts, pa.ts_cmp)  # type: ignore[type-var]
+                        hi = bisect_right(priv_naive_ts, pa.ts_cmp + window_td)  # type: ignore[type-var]
+                        candidates.extend(priv_naive[lo:hi])
+                        candidates.extend(idx for idx in priv_none if i_auth < idx)
+                    else:
+                        candidates.extend(idx for idx in priv_indices if i_auth < idx)
+
+                    for i_priv in candidates:
+                        if i_priv == i_auth:
+                            continue
+                        pp = prepared[i_priv]
+                        if pa.event.event_id == pp.event.event_id:
+                            continue
+                        if pa.user is not None and pp.user is not None and pa.user != pp.user:
+                            continue
+                        delta = _pair_delta(pa, pp)
+                        if delta is not None and delta > window:
+                            continue
+                        target_user = pa.user or pp.user or "unknown"
+                        desc = (
+                            f"Observed authentication activity ('{pa.event.event_type}') "
+                            f"followed by privilege-related activity ('{pp.event.event_type}') "
+                            f"for user '{target_user}'"
+                        )
+                        _try_emit(
+                            CorrelationType.AUTHENTICATION_PRIVILEGE,
+                            pa.event,
+                            pp.event,
+                            desc,
+                            delta,
+                            {
+                                "user": target_user,
+                                "auth_event_type": pa.event.event_type,
+                                "privilege_event_type": pp.event.event_type,
+                                "delta_seconds": delta,
+                            },
+                        )
 
         # 7. HOST_NETWORK relationship (V5.6)
         if CorrelationType.HOST_NETWORK in active_types:
-            if self.config.max_correlations is None or len(discovered) < self.config.max_correlations:
+            if limit is None or len(discovered) < limit:
                 from forensix.network_correlation import correlate_host_network_events
 
-                remaining = (
-                    self.config.max_correlations - len(discovered)
-                    if self.config.max_correlations is not None
-                    else None
-                )
+                remaining = (limit - len(discovered)) if limit is not None else None
+                probe_limit = (remaining + 1) if remaining is not None else None
                 host_net_corrs = correlate_host_network_events(
                     events,
                     time_window_seconds=window,
-                    max_correlations=remaining,
+                    max_correlations=probe_limit,
                 )
-                for corr in host_net_corrs:
-                    pair_key = tuple(sorted(corr.event_ids))
+                for idx_hn, corr in enumerate(host_net_corrs):
+                    pair_key = _pair_key_from_ids(corr.event_ids)
                     dedup_key = (CorrelationType.HOST_NETWORK.value, pair_key)
-                    if dedup_key not in seen_pairs:
-                        discovered.append(corr)
-                        seen_pairs.add(dedup_key)
+                    if dedup_key in seen_pairs:
+                        continue
+                    if limit is not None and len(discovered) >= limit:
+                        truncated = True
+                        skipped_candidates += len(host_net_corrs) - idx_hn
+                        break
+                    discovered.append(corr)
+                    seen_pairs.add(dedup_key)
 
         # Sort discovered correlations in stable, deterministic order
         discovered.sort(key=correlation_sort_key)
 
-        if self.config.max_correlations is not None:
-            discovered = discovered[: self.config.max_correlations]
+        if limit is not None and len(discovered) > limit:
+            skipped_candidates += len(discovered) - limit
+            discovered = discovered[:limit]
+            truncated = True
 
-        return CorrelationCollection(discovered)
+        return CorrelationCollection(
+            discovered,
+            truncated=truncated,
+            skipped_candidates=skipped_candidates,
+        )
+
+
+def _pair_key_from_ids(event_ids: Tuple[str, ...]) -> Tuple[str, str]:
+    if len(event_ids) == 2:
+        id1, id2 = event_ids[0], event_ids[1]
+        return (id1, id2) if id1 <= id2 else (id2, id1)
+    sorted_ids = sorted(event_ids)
+    return (sorted_ids[0], sorted_ids[1]) if len(sorted_ids) >= 2 else ("", "")
 
 
 def correlate_events(
@@ -638,7 +922,7 @@ def correlate_events(
     *,
     time_window_seconds: Optional[float] = None,
     relationship_types: Optional[Sequence[Union[CorrelationType, str]]] = None,
-    max_correlations: Optional[int] = None,
+    max_correlations: Any = _UNSET,
 ) -> CorrelationCollection:
     """
     Convenience functional interface to discover correlations from timeline events.

@@ -34,7 +34,7 @@ from forensix.advanced_report_models import (
 from forensix.artifact_adapters import adapt_artifacts
 from forensix.browser_analyzer import BrowserHistoryEvent
 from forensix.case_config import CaseConfig, validate_case_config
-from forensix.correlation_engine import correlate_events
+from forensix.correlation_engine import DEFAULT_MAX_CORRELATIONS, correlate_events
 from forensix.correlation_models import CorrelationCollection
 from forensix.custody_ledger import (
     CustodyChainVerificationResult,
@@ -166,6 +166,7 @@ class InvestigationPipeline:
         correlations: Optional[CorrelationCollection] = None
         detections: Optional[DetectionResultCollection] = None
         report: Optional[AdvancedReport] = None
+        report_warnings: List[str] = []
 
         clean_case_name = re.sub(r"[^\w\-.]", "_", str(self.config.case_id).strip()) if self.config.case_id else "case"
 
@@ -697,13 +698,25 @@ class InvestigationPipeline:
         if "correlation" in self.config.enabled_domains and all_timeline_events:
             combined_correlations: List[Any] = []
             # 1. Temporal and identity correlation across unified timeline
-            c1 = correlate_events(all_timeline_events)
+            c1 = correlate_events(all_timeline_events, max_correlations=DEFAULT_MAX_CORRELATIONS)
             combined_correlations.extend(c1.correlations)
+            corr_truncated = bool(c1.truncated)
+            corr_skipped = int(c1.skipped_candidates)
 
             # 2. Host-to-network IP correlation if both present
             if host_timeline_events and net_timeline_events:
-                corr_host_net = correlate_host_network_events(all_timeline_events)
-                combined_correlations.extend(corr_host_net.correlations)
+                remaining_cap = max(0, DEFAULT_MAX_CORRELATIONS - len(combined_correlations))
+                if remaining_cap > 0:
+                    corr_host_net = correlate_host_network_events(
+                        all_timeline_events,
+                        max_correlations=remaining_cap + 1,
+                    )
+                    if len(corr_host_net.correlations) > remaining_cap:
+                        corr_truncated = True
+                        corr_skipped += len(corr_host_net.correlations) - remaining_cap
+                    combined_correlations.extend(corr_host_net.correlations[:remaining_cap])
+                else:
+                    corr_truncated = True
 
             # Deduplicate by correlation_id
             seen_cids: Set[str] = set()
@@ -713,7 +726,25 @@ class InvestigationPipeline:
                     seen_cids.add(corr.correlation_id)
                     unique_correlations.append(corr)
 
-            correlations = CorrelationCollection(correlations=tuple(unique_correlations))
+            if len(unique_correlations) > DEFAULT_MAX_CORRELATIONS:
+                corr_truncated = True
+                corr_skipped += len(unique_correlations) - DEFAULT_MAX_CORRELATIONS
+                unique_correlations = unique_correlations[:DEFAULT_MAX_CORRELATIONS]
+
+            correlations = CorrelationCollection(
+                correlations=tuple(unique_correlations),
+                truncated=corr_truncated,
+                skipped_candidates=corr_skipped,
+            )
+            st8_warnings: List[str] = []
+            if corr_truncated:
+                cap_msg = (
+                    f"Correlation links capped at {DEFAULT_MAX_CORRELATIONS:,} per run "
+                    f"(truncated; {corr_skipped:,} candidate links skipped)."
+                )
+                st8_warnings.append(cap_msg)
+                report_warnings.append(cap_msg)
+
             st8_dur = time.perf_counter() - st8_t0
             stage_records.append(
                 StageRecord(
@@ -723,6 +754,7 @@ class InvestigationPipeline:
                     completed_at=datetime.now(timezone.utc).isoformat(),
                     duration_seconds=st8_dur,
                     records_produced=len(correlations),
+                    warnings=tuple(st8_warnings),
                 )
             )
         else:
@@ -813,6 +845,10 @@ class InvestigationPipeline:
                 if browser_events:
                     report_details["browser_history_count"] = len(browser_events)
                     report_details["browser_history_events"] = browser_events
+            if correlations and correlations.truncated:
+                report_details["correlations_truncated"] = True
+                report_details["correlation_cap"] = DEFAULT_MAX_CORRELATIONS
+                report_details["correlations_skipped"] = correlations.skipped_candidates
 
             case_meta = {
                 "case_id": self.config.case_id,
@@ -827,6 +863,7 @@ class InvestigationPipeline:
                 custody_ledger=ledger,
                 investigation_results=host_collection,
                 findings_summary=findings_summary,
+                warnings=report_warnings or None,
                 details=report_details,
             )
 

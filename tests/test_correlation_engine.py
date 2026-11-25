@@ -38,11 +38,14 @@ Covers:
 """
 
 from dataclasses import FrozenInstanceError
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
+from pathlib import Path
 import unittest
 
+from forensix.case_config import load_case_config_from_file
 from forensix.correlation_engine import (
+    DEFAULT_MAX_CORRELATIONS,
     CorrelationConfig,
     CorrelationEngine,
     correlate_events,
@@ -52,6 +55,7 @@ from forensix.correlation_engine import (
     extract_path_identity,
     extract_session_identity,
 )
+from forensix.pipeline_engine import run_pipeline
 from forensix.correlation_models import (
     Correlation,
     CorrelationCollection,
@@ -609,6 +613,59 @@ class TestCorrelationEngine(unittest.TestCase):
         result = correlate_events(timeline)
         self.assertGreater(len(result), 0)
         self.assertIsInstance(result, CorrelationCollection)
+
+    # 34. Cap enforcement and truncation metadata on dense cluster
+    def test_34_dense_cluster_hits_default_cap_and_sets_truncated(self):
+        """34. Verify dense cluster above 50,000 cap finishes fast and records truncation."""
+        base = datetime(2026, 10, 21, 12, 0, 0, tzinfo=timezone.utc)
+        # 260 events sharing source_path within 260s -> 2 * C(260, 2) = 67,340 candidates (> 50,000)
+        events = [
+            create_timeline_event(
+                category=TimelineCategory.LOG,
+                event_type="browser_history_visit",
+                description=f"chromium history visit: https://example.org/{i}",
+                timestamp=base + timedelta(seconds=i),
+                source_path="home/alice/.config/google-chrome/Default/History",
+                source_line=i + 1,
+            )
+            for i in range(260)
+        ]
+        result = correlate_events(events)
+        self.assertEqual(len(result), DEFAULT_MAX_CORRELATIONS)
+        self.assertTrue(result.truncated)
+        self.assertEqual(result.skipped_candidates, 67340 - DEFAULT_MAX_CORRELATIONS)
+        self.assertTrue(result.summary["truncated"])
+        self.assertEqual(result.summary["skipped_candidates"], 67340 - DEFAULT_MAX_CORRELATIONS)
+
+    # 35. Sparse and synthetic example results unchanged
+    def test_35_sparse_and_synthetic_results_unchanged(self):
+        """35. Verify sparse timeline yields 0 correlations and synthetic case yields exactly 152."""
+        base = datetime(2026, 10, 21, 12, 0, 0, tzinfo=timezone.utc)
+        sparse = [
+            create_timeline_event(
+                category=TimelineCategory.LOG,
+                event_type="browser_history_visit",
+                description=f"visit {i}",
+                timestamp=base + timedelta(seconds=i * 600),
+                source_path=f"var/log/file_{i}.log",
+            )
+            for i in range(50)
+        ]
+        sparse_res = correlate_events(sparse)
+        self.assertEqual(len(sparse_res), 0)
+        self.assertFalse(sparse_res.truncated)
+        self.assertEqual(sparse_res.skipped_candidates, 0)
+
+        repo_root = Path(__file__).resolve().parent.parent
+        case_json = repo_root / "examples" / "case-synthetic" / "case.json"
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cfg = load_case_config_from_file(case_json)
+            object.__setattr__(cfg, "output_dir", Path(tmpdir) / "out")
+            res = run_pipeline(cfg)
+            self.assertEqual(res.report.findings_summary.total_correlations, 152)
+            out_json = json.loads((Path(tmpdir) / "out" / "report_CASE-2026-SYNTHETIC-001.json").read_text(encoding="utf-8"))
+            self.assertNotIn("correlations_truncated", out_json.get("details", {}))
 
 
 if __name__ == "__main__":

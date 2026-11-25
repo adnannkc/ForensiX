@@ -14,11 +14,15 @@ Validates:
 import hashlib
 import json
 from pathlib import Path
+import sqlite3
 import struct
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 
 from forensix.case_config import CaseConfig
+from forensix.correlation_engine import DEFAULT_MAX_CORRELATIONS
+from forensix.dashboard_service import DashboardReportRegistry
 from forensix.pipeline_engine import (
     EXIT_SUCCESS,
     EXIT_VERIFICATION_OR_PARTIAL,
@@ -324,6 +328,65 @@ class TestPipelineEngine(unittest.TestCase):
         res = run_pipeline(config)
         self.assertEqual(res.exit_code, EXIT_VERIFICATION_OR_PARTIAL)
         self.assertEqual(res.run_manifest.run_status, "PARTIAL_SUCCESS")
+
+    def test_09_dense_chrome_history_caps_correlations_and_reports_truncation(self):
+        """Prove dense browser history hits the 50,000 cap, finishes, and records truncation in JSON, HTML, and dashboard."""
+        chrome_dir = self.base_dir / "dense_host"
+        db_path = chrome_dir / "home" / "alice" / ".config" / "google-chrome" / "Default" / "History"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            "CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT NOT NULL, title TEXT, visit_count INTEGER DEFAULT 0, last_visit_time INTEGER)"
+        )
+        conn.execute(
+            "CREATE TABLE visits (id INTEGER PRIMARY KEY, url INTEGER NOT NULL, visit_time INTEGER NOT NULL)"
+        )
+        chrom_epoch = datetime(1601, 1, 1, tzinfo=timezone.utc)
+        base_dt = datetime(2026, 10, 21, 12, 0, 0, tzinfo=timezone.utc)
+        base_us = int((base_dt - chrom_epoch).total_seconds() * 1_000_000)
+        for i in range(1, 251):
+            ts_us = base_us + i * 1_000_000
+            conn.execute(
+                "INSERT INTO urls (id, url, title, visit_count, last_visit_time) VALUES (?, ?, ?, ?, ?)",
+                (i, f"https://example.org/page/{i}", f"Page {i}", 1, ts_us),
+            )
+            conn.execute(
+                "INSERT INTO visits (id, url, visit_time) VALUES (?, ?, ?)",
+                (i, i, ts_us),
+            )
+        conn.commit()
+        conn.close()
+
+        config = CaseConfig(
+            case_id="DENSE_CHROME_01",
+            evidence_host_dir=chrome_dir,
+            output_dir=self.out_dir,
+            overwrite=True,
+        )
+        res = run_pipeline(config)
+        self.assertEqual(res.exit_code, EXIT_SUCCESS)
+        self.assertIsNotNone(res.report)
+        assert res.report is not None
+        self.assertEqual(res.report.findings_summary.total_correlations, DEFAULT_MAX_CORRELATIONS)
+
+        report_json_path = self.out_dir / "report_DENSE_CHROME_01.json"
+        report_html_path = self.out_dir / "report_DENSE_CHROME_01.html"
+        report_json = json.loads(report_json_path.read_text(encoding="utf-8"))
+        self.assertTrue(report_json["details"]["correlations_truncated"])
+        self.assertEqual(report_json["details"]["correlation_cap"], DEFAULT_MAX_CORRELATIONS)
+        self.assertGreater(report_json["details"]["correlations_skipped"], 0)
+        warnings_text = " ".join(report_json["limitations"]["warnings"])
+        self.assertIn("capped at 50,000", warnings_text)
+
+        html_text = report_html_path.read_text(encoding="utf-8")
+        self.assertIn("capped at 50,000", html_text)
+
+        registry = DashboardReportRegistry()
+        rep_id = registry.register_file(report_json_path)
+        view = registry.get_report_view(rep_id)
+        self.assertIsNotNone(view)
+        assert view is not None
+        self.assertTrue(any("capped at 50,000" in w for w in view["warnings"]))
 
 
 if __name__ == "__main__":

@@ -183,20 +183,21 @@ class TestEndToEndPipeline(unittest.TestCase):
         self.assertEqual(len(initial_reports), len(current_reports))
 
     def test_scenario_g_directory_target(self):
-        """Scenario G: Passing a directory returns non-zero status and creates no report."""
-        initial_reports = list(self.reports_dir.glob("*.json"))
+        """Scenario G: Passing an existing directory runs the case pipeline and writes default reports."""
         sub_folder = self.evidence_dir / "target_folder"
         sub_folder.mkdir(parents=True, exist_ok=True)
 
         proc = self._run_cli(str(sub_folder), "-o", str(self.reports_dir))
 
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("target is a directory", proc.stderr)
+        self.assertEqual(proc.returncode, 0, f"Expected 0 on directory target, got {proc.returncode}: {proc.stderr}")
+        self.assertIn("ForensiX V9", proc.stdout)
         self.assertNotIn("Traceback", proc.stderr)
 
-        # Assert no report was created
-        current_reports = list(self.reports_dir.glob("*.json"))
-        self.assertEqual(len(initial_reports), len(current_reports))
+        # Assert default case outputs were created
+        self.assertTrue((self.reports_dir / "report_case.json").exists())
+        self.assertTrue((self.reports_dir / "report_case.html").exists())
+        self.assertTrue((self.reports_dir / "ledger_case.json").exists())
+        self.assertTrue((self.reports_dir / "pipeline_manifest.json").exists())
 
     def test_scenario_h_read_only_evidence(self):
         """Scenario H: Read-only evidence is analyzed without modification or permission failure."""

@@ -109,23 +109,65 @@ class TestCLI(unittest.TestCase):
         self.assertIn("Error: Evidence file does not exist", err_output)
         self.assertNotIn("Traceback", err_output)
 
-    def test_directory_supplied_returns_nonzero_exit_status(self):
-        """Verify directory target produces concise error and non-zero exit status."""
-        sub_dir = self.test_dir_path / "sub_folder"
-        sub_dir.mkdir()
+    def test_directory_supplied_runs_case_pipeline(self):
+        """Verify supplying an existing directory runs the case pipeline with default settings."""
+        sub_dir = self.test_dir_path / "evidence_folder"
+        etc_dir = sub_dir / "etc"
+        etc_dir.mkdir(parents=True)
+        (etc_dir / "passwd").write_text("root:x:0:0:root:/root:/bin/bash\n", encoding="utf-8")
+
+        stdout_capture = io.StringIO()
         stderr_capture = io.StringIO()
 
-        orig_stderr = sys.stderr
+        orig_cwd = os.getcwd()
+        orig_stdout, orig_stderr = sys.stdout, sys.stderr
         try:
+            # Run inside temp workspace so default reports/ writes inside temp dir
+            os.chdir(self.test_dir_path)
+            sys.stdout = stdout_capture
             sys.stderr = stderr_capture
             ret = main([str(sub_dir)])
         finally:
-            sys.stderr = orig_stderr
+            os.chdir(orig_cwd)
+            sys.stdout, sys.stderr = orig_stdout, orig_stderr
 
-        self.assertNotEqual(ret, 0)
+        self.assertEqual(ret, 0)
         err_output = stderr_capture.getvalue()
-        self.assertIn("Error: Expected a regular evidence file, but target is a directory", err_output)
-        self.assertNotIn("Traceback", err_output)
+        self.assertEqual(err_output, "")
+        out = stdout_capture.getvalue()
+        self.assertIn("ForensiX V9", out)
+        self.assertIn("SUCCESS", out)
+
+        default_reports = self.test_dir_path / "reports"
+        self.assertTrue((default_reports / "report_case.json").exists())
+        self.assertTrue((default_reports / "report_case.html").exists())
+        self.assertTrue((default_reports / "ledger_case.json").exists())
+        self.assertTrue((default_reports / "pipeline_manifest.json").exists())
+
+    def test_directory_supplied_forwards_case_flags(self):
+        """Verify forensix <evidence-folder> accepts case flags such as -o and --case-id."""
+        sub_dir = self.test_dir_path / "evidence_folder_flags"
+        sub_dir.mkdir()
+        env = dict(os.environ, PYTHONPATH="src")
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "forensix",
+                str(sub_dir),
+                "--case-id",
+                "CASE-QUICK-01",
+                "-o",
+                str(self.reports_dir),
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("CASE-QUICK-01", proc.stdout)
+        self.assertTrue((self.reports_dir / "report_CASE-QUICK-01.json").exists())
+        self.assertTrue((self.reports_dir / "report_CASE-QUICK-01.html").exists())
 
     def test_original_evidence_remains_unchanged_after_cli_run(self):
         """Verify CLI execution leaves evidence bytes and metadata completely untouched."""

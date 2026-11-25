@@ -34,7 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python3 -m forensix",
         description="ForensiX - Automated Digital Forensics & Incident Triage Platform (V1)",
         epilog=(
-            "Analyzes evidence files in binary read-only mode and writes JSON reports to reports/.\n"
+            "Analyzes evidence files in binary read-only mode and writes JSON reports to reports/,\n"
+            "or runs a full case pipeline with default settings when given an evidence directory:\n"
+            "  forensix <evidence-folder>\n\n"
             "For controlled investigation pipeline and case runner, use: python3 -m forensix case --help\n"
             "For controlled multi-domain investigation pipeline (V9), use: python3 -m forensix run --help\n"
             "For automated multi-stage incident triage, use: python3 -m forensix triage --help\n"
@@ -325,6 +327,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     Main CLI entry point for ForensiX.
 
     Supports:
+    - Full Case Pipeline Shorthand: forensix <evidence_dir> [case options]
     - V1 Single Evidence File Analysis: python3 -m forensix <file> [-o output_dir]
     - V2.9 End-to-End Automated Triage: python3 -m forensix triage <evidence_dir> [options]
 
@@ -370,6 +373,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return run_note_cli(raw_args[1:])
     if raw_args and raw_args[0] == "timeline":
         return timeline_main(raw_args[1:])
+    if raw_args and not raw_args[0].startswith("-") and Path(raw_args[0]).is_dir():
+        from forensix.case_cli import case_main
+        return case_main(["--evidence-host-dir", raw_args[0], *raw_args[1:]])
 
     parser = build_parser()
     args = parser.parse_args(argv)

@@ -17,6 +17,9 @@ evidence/*
 reports/
 reports/*
 !reports/.gitkeep
+reports-clean/
+reports-small/
+reports-browser/
 
 # IDE
 .vscode/

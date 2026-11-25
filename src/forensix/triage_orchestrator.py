@@ -26,6 +26,7 @@ from forensix.artifacts import ArtifactCategory, ArtifactCollectionResult, Artif
 from forensix.audit import AuditEvent, AuditEventType, create_audit_event
 from forensix.auth_analyzer import extract_authentication_activity
 from forensix.auth_models import AuthenticationActivityResult, AuthenticationRecord
+from forensix.browser_analyzer import BrowserHistoryResult, analyze_browser_history
 from forensix.investigation import HostArtifactInvestigator, InvestigationResultSet
 from forensix.log_models import LogEvent, LogParseResult
 from forensix.log_parser import parse_log_file
@@ -135,6 +136,7 @@ class StageExecutionContext:
     auth_result: Optional[AuthenticationActivityResult] = None
     account_result: Optional[AccountCollectionResult] = None
     persistence_result: Optional[PersistenceCollectionResult] = None
+    browser_result: Optional[BrowserHistoryResult] = None
     host_collection: Optional[HostArtifactCollection] = None
     investigator: Optional[HostArtifactInvestigator] = None
     investigation_result: Optional[InvestigationResultSet] = None
@@ -864,16 +866,24 @@ class TriageOrchestrator:
             else TriageStageStatus.COMPLETED
         )
 
-        warnings: Tuple[str, ...] = ()
+        warnings: List[str] = []
         if collection_result.unreadable_artifacts > 0:
-            warnings = (f"{collection_result.unreadable_artifacts} unreadable artifacts detected during filesystem scan",)
+            warnings.append(f"{collection_result.unreadable_artifacts} unreadable artifacts detected during filesystem scan")
+
+        try:
+            browser_res = analyze_browser_history(ctx.evidence_path)
+            ctx.browser_result = browser_res
+            for b_err in browser_res.errors:
+                warnings.append(f"Browser history warning ({b_err.source_path}): {b_err.error}")
+        except Exception as exc:
+            warnings.append(f"Browser history collection warning: {exc}")
 
         return TriageStageResult(
             stage_id=TriageStage.FILESYSTEM_COLLECTION.value,
             stage_name=STAGE_NAMES[TriageStage.FILESYSTEM_COLLECTION.value],
             status=status,
             records_produced=collection_result.total_artifacts,
-            warnings=warnings,
+            warnings=tuple(warnings),
             metadata=(
                 ("total_artifacts", collection_result.total_artifacts),
                 ("known_artifacts", collection_result.known_artifacts),
@@ -1008,12 +1018,14 @@ class TriageOrchestrator:
         all_records: List[SpecializedPayload] = []
         missing_or_failed_stages: List[str] = []
 
-        # Gather filesystem records
+        # Gather filesystem and browser records
         if TriageStage.FILESYSTEM_COLLECTION.value in ctx.config.enabled_stages:
             st = ctx.stage_results.get(TriageStage.FILESYSTEM_COLLECTION.value)
             if st is not None and st.status in (TriageStageStatus.COMPLETED.value, TriageStageStatus.PARTIAL.value):
                 if ctx.filesystem_result:
                     all_records.extend(ctx.filesystem_result.artifacts)
+                if ctx.browser_result and ctx.browser_result.events:
+                    all_records.extend(ctx.browser_result.events)
             else:
                 missing_or_failed_stages.append(TriageStage.FILESYSTEM_COLLECTION.value)
 

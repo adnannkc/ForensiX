@@ -26,6 +26,7 @@ from forensix.account_models import (
 )
 from forensix.artifacts import ArtifactRecord
 from forensix.auth_models import AuthenticationRecord
+from forensix.browser_analyzer import BrowserHistoryEvent
 from forensix.log_models import LogEvent
 from forensix.persistence_models import PersistenceRecord
 from forensix.unified_models import (
@@ -220,6 +221,26 @@ def persistence_record_to_host_artifact(persist: PersistenceRecord) -> HostArtif
     )
 
 
+def browser_event_to_host_artifact(ev: BrowserHistoryEvent) -> HostArtifact:
+    """Adapt a BrowserHistoryEvent into a unified HostArtifact."""
+    if not isinstance(ev, BrowserHistoryEvent):
+        raise TypeError(f"Expected BrowserHistoryEvent, got {type(ev).__name__}")
+    return HostArtifact(
+        unified_id=generate_host_artifact_id(),
+        source_id=ev.event_id,
+        source_event_id=ev.event_id,
+        source_artifact_id=None,
+        category=HostArtifactCategory.BROWSER.value,
+        artifact_type=f"{ev.browser}_history",
+        source_path=ev.source_path,
+        line_number=ev.row_id,
+        raw_data=ev.url,
+        specialized_payload=ev,
+        status="PARSED",
+        warnings=(),
+    )
+
+
 def to_host_artifact(record: SpecializedPayload) -> HostArtifact:
     """
     Polymorphic dispatcher to adapt any supported specialized V2 model to a HostArtifact.
@@ -244,6 +265,8 @@ def to_host_artifact(record: SpecializedPayload) -> HostArtifact:
         return ssh_key_to_host_artifact(record)
     elif isinstance(record, PersistenceRecord):
         return persistence_record_to_host_artifact(record)
+    elif isinstance(record, BrowserHistoryEvent):
+        return browser_event_to_host_artifact(record)
     raise TypeError(
         f"Unsupported record type for HostArtifact adaptation: {type(record).__name__}. "
         "Must be a valid V2 forensic result model."

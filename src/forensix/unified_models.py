@@ -21,6 +21,7 @@ from forensix.account_models import (
 )
 from forensix.artifacts import ArtifactRecord
 from forensix.auth_models import AuthenticationRecord
+from forensix.browser_analyzer import BrowserHistoryEvent
 from forensix.log_models import LogEvent
 from forensix.persistence_models import PersistenceRecord
 
@@ -34,6 +35,7 @@ SpecializedPayload = Union[
     SudoRule,
     SshKeyInfo,
     PersistenceRecord,
+    BrowserHistoryEvent,
 ]
 
 SUPPORTED_PAYLOAD_TYPES = (
@@ -46,6 +48,7 @@ SUPPORTED_PAYLOAD_TYPES = (
     SudoRule,
     SshKeyInfo,
     PersistenceRecord,
+    BrowserHistoryEvent,
 )
 
 
@@ -61,6 +64,7 @@ class HostArtifactCategory(str, Enum):
     PRIVILEGE = "privilege"
     SSH_KEY = "ssh_key"
     PERSISTENCE = "persistence"
+    BROWSER = "browser"
 
 
 def generate_host_artifact_id() -> str:

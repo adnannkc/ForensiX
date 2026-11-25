@@ -43,6 +43,7 @@ from forensix.account_models import (
 from forensix.analyzer import FileMetadata, ForensicAnalysisResult
 from forensix.artifacts import ArtifactRecord
 from forensix.auth_models import AuthenticationRecord
+from forensix.browser_analyzer import BrowserHistoryEvent
 from forensix.log_models import LogEvent
 from forensix.persistence_models import PersistenceRecord
 from forensix.timeline_models import (
@@ -1111,15 +1112,93 @@ class AuthenticationAdapter(BaseArtifactAdapter):
         return (event,)
 
 
+class BrowserHistoryAdapter(BaseArtifactAdapter):
+    """
+    Adapter converting BrowserHistoryEvent records into TimelineEvents.
+    """
+
+    def can_adapt(self, artifact: Any) -> bool:
+        """Check if artifact is a BrowserHistoryEvent or browser HostArtifact."""
+        if isinstance(artifact, BrowserHistoryEvent):
+            return True
+        if isinstance(artifact, HostArtifact):
+            return (
+                artifact.category == HostArtifactCategory.BROWSER.value
+                or isinstance(artifact.specialized_payload, BrowserHistoryEvent)
+            )
+        return False
+
+    def adapt(self, artifact: Any) -> Tuple[TimelineEvent, ...]:
+        """Adapt a browser history artifact into a tuple of TimelineEvents."""
+        if artifact is None:
+            raise ValueError("Artifact cannot be None")
+        if not self.can_adapt(artifact):
+            raise TypeError(
+                f"Unsupported artifact type for BrowserHistoryAdapter: {type(artifact).__name__}"
+            )
+        if isinstance(artifact, HostArtifact):
+            if isinstance(artifact.specialized_payload, BrowserHistoryEvent):
+                return self._adapt_browser_event(
+                    artifact.specialized_payload,
+                    source_artifact_id=artifact.source_artifact_id,
+                )
+            raise TypeError(
+                f"HostArtifact payload {type(artifact.specialized_payload).__name__} is not a supported browser artifact"
+            )
+        return self._adapt_browser_event(artifact)
+
+    def _adapt_browser_event(
+        self,
+        ev: BrowserHistoryEvent,
+        source_artifact_id: Optional[str] = None,
+    ) -> Tuple[TimelineEvent, ...]:
+        norm_res = _safe_normalize(ev.visit_time)
+        attrs: Dict[str, Any] = {
+            "browser": ev.browser,
+            "url": ev.url,
+            "row_id": ev.row_id,
+        }
+        if ev.title is not None:
+            attrs["title"] = ev.title
+        if ev.visit_count is not None:
+            attrs["visit_count"] = ev.visit_count
+
+        desc = f"{ev.browser} history visit: {ev.url}"
+        if ev.title:
+            desc = f"{desc} ({ev.title})"
+
+        target_art_id = source_artifact_id or compute_deterministic_artifact_id(
+            path=ev.source_path,
+            relative_path=ev.source_path,
+        )
+
+        event = create_timeline_event(
+            category=TimelineCategory.LOG,
+            event_type="browser_history_visit",
+            description=desc,
+            timestamp=norm_res.normalized_datetime,
+            raw_timestamp=ev.visit_time.isoformat(),
+            source_path=ev.source_path,
+            source_line=ev.row_id,
+            source_artifact_id=target_art_id,
+            source_event_id=ev.event_id,
+            raw_data=ev.url,
+            attributes=attrs,
+        )
+        return (event,)
+
+
 # Singleton adapter instances for polymorphic dispatch
 _DEFAULT_FILESYSTEM_ADAPTER = FilesystemAdapter()
 _DEFAULT_LOG_ADAPTER = LogAdapter()
 _DEFAULT_AUTH_ADAPTER = AuthenticationAdapter()
+_DEFAULT_BROWSER_ADAPTER = BrowserHistoryAdapter()
 
 _ALL_ADAPTERS: Tuple[BaseArtifactAdapter, ...] = (
     _DEFAULT_FILESYSTEM_ADAPTER,
     _DEFAULT_LOG_ADAPTER,
     _DEFAULT_AUTH_ADAPTER,
+    _DEFAULT_BROWSER_ADAPTER,
 )
 
 
@@ -1346,6 +1425,27 @@ def adapt_artifacts(
                 source_artifact_id=resolved_art_id,
                 log_timestamp_year=log_timestamp_year,
                 evidence_root=evidence_root,
+            )
+        elif isinstance(art, BrowserHistoryEvent):
+            resolved_art_id = (
+                path_to_det_id.get(_normalize_evidence_path(art.source_path))
+                if art.source_path
+                else None
+            )
+            events = _DEFAULT_BROWSER_ADAPTER._adapt_browser_event(
+                art,
+                source_artifact_id=resolved_art_id,
+            )
+        elif isinstance(art, HostArtifact) and isinstance(art.specialized_payload, BrowserHistoryEvent):
+            browser_payload = art.specialized_payload
+            resolved_art_id = None
+            if art.source_artifact_id and art.source_artifact_id in v2_to_det_id:
+                resolved_art_id = v2_to_det_id[art.source_artifact_id]
+            elif browser_payload.source_path:
+                resolved_art_id = path_to_det_id.get(_normalize_evidence_path(browser_payload.source_path))
+            events = _DEFAULT_BROWSER_ADAPTER._adapt_browser_event(
+                browser_payload,
+                source_artifact_id=resolved_art_id,
             )
         else:
             events = adapt_artifact(art)

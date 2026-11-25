@@ -32,6 +32,7 @@ from forensix.advanced_report_models import (
     FindingsSummary,
 )
 from forensix.artifact_adapters import adapt_artifacts
+from forensix.browser_analyzer import BrowserHistoryEvent
 from forensix.case_config import CaseConfig, validate_case_config
 from forensix.correlation_engine import correlate_events
 from forensix.correlation_models import CorrelationCollection
@@ -85,7 +86,7 @@ from forensix.timeline_models import TimelineCategory, TimelineEvent
 from forensix.timeline_reconstruction import ReconstructedTimeline, reconstruct_timeline
 from forensix.triage_models import TriageConfig, TriageResult
 from forensix.triage_orchestrator import TriageOrchestrator
-from forensix.unified_models import HostArtifact, HostArtifactCollection
+from forensix.unified_models import HostArtifact, HostArtifactCategory, HostArtifactCollection
 
 # Standard exit code contract for ForensiX V9
 EXIT_SUCCESS = 0
@@ -803,6 +804,15 @@ class InvestigationPipeline:
                 report_details["detections"] = [
                     d.to_dict() for d in detections if d.matched
                 ]
+            if host_collection and host_collection.artifacts:
+                browser_events = [
+                    art.specialized_payload.to_dict()
+                    for art in host_collection.artifacts
+                    if isinstance(art.specialized_payload, BrowserHistoryEvent)
+                ]
+                if browser_events:
+                    report_details["browser_history_count"] = len(browser_events)
+                    report_details["browser_history_events"] = browser_events
 
             case_meta = {
                 "case_id": self.config.case_id,

@@ -26,18 +26,6 @@ UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 CHROMIUM_EPOCH = datetime(1601, 1, 1, tzinfo=timezone.utc)
 _BROWSER_EVENT_NAMESPACE = uuid.UUID("7f4f45d4-3c6e-4b3e-9a4e-64c6b1c8a910")
 
-_CHROMIUM_DIR_MARKERS = {
-    ".config",
-    "chromium",
-    "google-chrome",
-    "chrome",
-    "bravesoftware",
-    "brave-browser",
-    "microsoft-edge",
-    "browser",
-    "default",
-}
-
 
 @dataclass(frozen=True)
 class _BrowserSchemaSpec:
@@ -325,22 +313,51 @@ def parse_chromium_history(
     return _parse_single(db_path, _CHROMIUM_SPEC, evidence_root=evidence_root)
 
 
+_DISCOVERY_PATTERNS: Tuple[Tuple[str, bool, Tuple[str, ...], str, _BrowserSchemaSpec], ...] = (
+    # Linux Firefox
+    ("home", True, (".mozilla", "firefox"), "places.sqlite", _FIREFOX_SPEC),
+    ("root", False, (".mozilla", "firefox"), "places.sqlite", _FIREFOX_SPEC),
+    # Linux Chromium
+    ("home", True, (".config", "chromium"), "History", _CHROMIUM_SPEC),
+    ("home", True, (".config", "google-chrome"), "History", _CHROMIUM_SPEC),
+    ("home", True, (".config", "brave-browser"), "History", _CHROMIUM_SPEC),
+    ("home", True, (".config", "microsoft-edge"), "History", _CHROMIUM_SPEC),
+    ("root", False, (".config", "chromium"), "History", _CHROMIUM_SPEC),
+    ("root", False, (".config", "google-chrome"), "History", _CHROMIUM_SPEC),
+    ("root", False, (".config", "brave-browser"), "History", _CHROMIUM_SPEC),
+    ("root", False, (".config", "microsoft-edge"), "History", _CHROMIUM_SPEC),
+    # Windows Chromium
+    ("Users", True, ("AppData", "Local", "Google", "Chrome", "User Data"), "History", _CHROMIUM_SPEC),
+    ("Users", True, ("AppData", "Local", "Microsoft", "Edge", "User Data"), "History", _CHROMIUM_SPEC),
+    ("Users", True, ("AppData", "Local", "BraveSoftware", "Brave-Browser", "User Data"), "History", _CHROMIUM_SPEC),
+    # Windows Firefox
+    ("Users", True, ("AppData", "Roaming", "Mozilla", "Firefox", "Profiles"), "places.sqlite", _FIREFOX_SPEC),
+    # macOS Chromium
+    ("Users", True, ("Library", "Application Support", "Google", "Chrome"), "History", _CHROMIUM_SPEC),
+    ("Users", True, ("Library", "Application Support", "Microsoft Edge"), "History", _CHROMIUM_SPEC),
+    ("Users", True, ("Library", "Application Support", "BraveSoftware", "Brave-Browser"), "History", _CHROMIUM_SPEC),
+    # macOS Firefox
+    ("Users", True, ("Library", "Application Support", "Firefox", "Profiles"), "places.sqlite", _FIREFOX_SPEC),
+)
+
+
 def _match_browser_spec(rel_parts: Tuple[str, ...]) -> Optional[_BrowserSchemaSpec]:
-    """Identify whether a relative file path matches Firefox or Chromium history."""
+    """Identify whether a relative file path strictly matches an allowed browser profile layout."""
     if not rel_parts:
         return None
-    filename = rel_parts[-1]
-    if filename == "places.sqlite":
-        return _FIREFOX_SPEC
-    if filename == "History":
-        if len(rel_parts) == 1:
-            return _CHROMIUM_SPEC
-        parent_lower = [part.lower() for part in rel_parts[:-1]]
-        if rel_parts[0] in ("home", "root", "Users") or any(
-            part in _CHROMIUM_DIR_MARKERS or part.startswith("profile ")
-            for part in parent_lower
-        ):
-            return _CHROMIUM_SPEC
+    for root_dir, has_user, middle_parts, filename, spec in _DISCOVERY_PATTERNS:
+        mid_start = 2 if has_user else 1
+        expected_len = mid_start + len(middle_parts) + 2
+        if len(rel_parts) != expected_len:
+            continue
+        if rel_parts[0] != root_dir or rel_parts[-1] != filename:
+            continue
+        if has_user and not rel_parts[1]:
+            continue
+        if not rel_parts[-2]:
+            continue
+        if rel_parts[mid_start : mid_start + len(middle_parts)] == middle_parts:
+            return spec
     return None
 
 

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 9.3.0
+
+- New user accounts, password changes, and SSH key changes are detected from log lines.
+- SSH key findings say "modified" only when the log shows a change, and "referenced" otherwise.
+- Each finding shows its source file and line number in the report and dashboard.
+- Log-based detection rules are in src/forensix/account_rules.py.
+
 ## 9.2.0
 
 - Browser history (Firefox and Chromium) is now analyzed in the case pipeline.

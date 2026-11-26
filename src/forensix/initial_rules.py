@@ -60,6 +60,7 @@ def create_ssh_auth_sudo_rule(
         required_event_types=["ssh_login_success", "sudo_command"],
         required_relationships=[RelationshipType.AUTHENTICATION_PRIVILEGE],
         time_window_seconds=time_window_seconds,
+        severity="medium",
         attributes={
             "rule_type": "initial_v4",
             "pattern_id": "RULE-1-SSH-SUDO",
@@ -90,6 +91,7 @@ def create_repeated_ssh_failure_success_rule(
         required_categories=[TimelineCategory.AUTHENTICATION],
         required_event_types=["ssh_login_failure", "ssh_login_success"],
         time_window_seconds=time_window_seconds,
+        severity="high",
         attributes={
             "rule_type": "initial_v4",
             "pattern_id": "RULE-2-SSH-FAIL-SUCCESS",
@@ -125,6 +127,7 @@ def create_account_privilege_rule(
         ],
         required_event_types=[account_event_type, privilege_event_type],
         time_window_seconds=time_window_seconds,
+        severity="critical",
         attributes={
             "rule_type": "initial_v4",
             "pattern_id": "RULE-3-ACCOUNT-PRIVILEGE",
@@ -160,6 +163,7 @@ def create_persistence_followup_rule(
         ],
         required_event_types=[trigger_event_type, persistence_event_type],
         time_window_seconds=time_window_seconds,
+        severity="critical",
         attributes={
             "rule_type": "initial_v4",
             "pattern_id": "RULE-4-PERSISTENCE-FOLLOWUP",

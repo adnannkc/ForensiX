@@ -35,6 +35,7 @@ def create_user_added_rule() -> DetectionRule:
         detection_description="Observed a syslog entry recording user account creation.",
         required_categories=[TimelineCategory.LOG, TimelineCategory.AUTHENTICATION],
         required_event_types=["user_added"],
+        severity="high",
         attributes={
             "rule_type": "canonical_account",
             "pattern_id": "ACCT-1-USER-ADDED",
@@ -50,6 +51,7 @@ def create_user_modified_rule() -> DetectionRule:
         detection_description="Observed a syslog entry recording a user account modification.",
         required_categories=[TimelineCategory.LOG, TimelineCategory.AUTHENTICATION],
         required_event_types=["user_modified"],
+        severity="medium",
         attributes={
             "rule_type": "canonical_account",
             "pattern_id": "ACCT-2-USER-MODIFIED",
@@ -65,6 +67,7 @@ def create_password_changed_rule() -> DetectionRule:
         detection_description="Observed a syslog entry recording an account password change.",
         required_categories=[TimelineCategory.LOG, TimelineCategory.AUTHENTICATION],
         required_event_types=["password_changed"],
+        severity="medium",
         attributes={
             "rule_type": "canonical_account",
             "pattern_id": "ACCT-3-PASSWORD-CHANGED",
@@ -84,6 +87,7 @@ def create_ssh_keys_activity_rule() -> DetectionRule:
             RuleCondition("event_type", ConditionOperator.IN, ["ssh_key_modified", "sudo_command"]),
             RuleCondition("references_authorized_keys", ConditionOperator.EQUALS, True),
         ],
+        severity="high",
         attributes={
             "rule_type": "canonical_account",
             "pattern_id": "ACCT-4-SSH-AUTHORIZED-KEYS",

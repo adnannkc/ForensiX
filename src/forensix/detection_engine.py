@@ -38,10 +38,13 @@ from forensix.correlation_models import (
     CorrelationType,
 )
 from forensix.rule_models import (
+    DEFAULT_RULE_SEVERITY,
+    SEVERITY_RANK,
     ConditionOperator,
     DetectionRule,
     RuleCollection,
     RuleCondition,
+    normalize_severity,
 )
 from forensix.timeline_models import (
     TimelineCategory,
@@ -140,6 +143,7 @@ class DetectionResult:
     end_timestamp: Optional[datetime] = None
     time_delta_seconds: Optional[float] = None
     explanation: str = ""
+    severity: str = DEFAULT_RULE_SEVERITY
     attributes: Tuple[Tuple[str, Any], ...] = ()
 
     def __init__(
@@ -158,6 +162,7 @@ class DetectionResult:
         time_delta_seconds: Optional[Union[float, int]] = None,
         explanation: str = "",
         description: Optional[str] = None,
+        severity: Optional[str] = DEFAULT_RULE_SEVERITY,
         attributes: Any = None,
     ) -> None:
         # 1. Validate rule_id & rule_name
@@ -341,6 +346,7 @@ class DetectionResult:
         object.__setattr__(self, "end_timestamp", validated_end_ts)
         object.__setattr__(self, "time_delta_seconds", validated_delta)
         object.__setattr__(self, "explanation", clean_expl)
+        object.__setattr__(self, "severity", normalize_severity(severity))
         object.__setattr__(self, "attributes", frozen_attributes)
 
     @property
@@ -378,6 +384,7 @@ class DetectionResult:
             "end_timestamp": self.end_timestamp.isoformat() if self.end_timestamp is not None else None,
             "time_delta_seconds": self.time_delta_seconds,
             "explanation": self.explanation,
+            "severity": self.severity,
             "attributes": unfreeze_to_dict(self.attributes),
         }
 
@@ -399,6 +406,7 @@ class DetectionResult:
             end_timestamp=data.get("end_timestamp"),
             time_delta_seconds=data.get("time_delta_seconds"),
             explanation=data.get("explanation", ""),
+            severity=data.get("severity", DEFAULT_RULE_SEVERITY),
             attributes=data.get("attributes", {}),
         )
 
@@ -508,6 +516,14 @@ def detection_sort_key(res: DetectionResult) -> Tuple[Any, ...]:
         eid1,
         cid1,
         res.detection_id,
+    )
+
+
+def severity_detection_sort_key(res: DetectionResult) -> Tuple[int, Tuple[Any, ...]]:
+    """Sort key ordering detections by highest severity first, then chronological detection order."""
+    return (
+        SEVERITY_RANK.get(res.severity, SEVERITY_RANK[DEFAULT_RULE_SEVERITY]),
+        detection_sort_key(res),
     )
 
 
@@ -942,6 +958,7 @@ class DetectionEngine:
                                     end_timestamp=corr.end_timestamp,
                                     time_delta_seconds=corr.time_delta_seconds,
                                     explanation=_resolve_detection_explanation(rule, corr_events),
+                                    severity=rule.severity,
                                     attributes={
                                         "relationship_type": corr.relationship_type.value,
                                         "rule_description": rule.description,
@@ -990,6 +1007,7 @@ class DetectionEngine:
                                     end_timestamp=ev.timestamp,
                                     time_delta_seconds=0.0 if ev.timestamp else None,
                                     explanation=_resolve_detection_explanation(rule, [ev]),
+                                    severity=rule.severity,
                                     attributes={"rule_description": rule.description},
                                 )
                                 detections.append(det)
@@ -1035,6 +1053,7 @@ class DetectionEngine:
                                         end_timestamp=last_ev.timestamp,
                                         time_delta_seconds=seq_delta,
                                         explanation=_resolve_detection_explanation(rule, current_seq),
+                                        severity=rule.severity,
                                         attributes={"rule_description": rule.description},
                                     )
                                     detections.append(det)

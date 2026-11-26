@@ -49,6 +49,29 @@ FORENSIX_V4_RULE_NAMESPACE = uuid.uuid5(
     uuid.NAMESPACE_URL, "https://forensix.local/v4/rule"
 )
 
+VALID_SEVERITIES: Tuple[str, ...] = ("critical", "high", "medium", "low")
+DEFAULT_RULE_SEVERITY: str = "medium"
+SEVERITY_RANK: Dict[str, int] = {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 3,
+}
+
+
+def normalize_severity(val: Any) -> str:
+    """Validate and normalize a rule or detection severity level to critical/high/medium/low."""
+    if val is None:
+        return DEFAULT_RULE_SEVERITY
+    if not isinstance(val, str):
+        raise TypeError(f"severity must be a string or None, got {type(val).__name__}")
+    clean = val.strip().lower()
+    if clean not in SEVERITY_RANK:
+        raise ValueError(
+            f"Invalid severity '{val}'. Must be one of: {', '.join(VALID_SEVERITIES)}"
+        )
+    return clean
+
 
 class ConditionOperator(str, Enum):
     """
@@ -304,6 +327,7 @@ class DetectionRule:
     required_relationships: Tuple[CorrelationType, ...] = ()
     conditions: Tuple[RuleCondition, ...] = ()
     time_window_seconds: Optional[float] = None
+    severity: str = DEFAULT_RULE_SEVERITY
     attributes: Tuple[Tuple[str, Any], ...] = ()
 
     def __init__(
@@ -318,6 +342,7 @@ class DetectionRule:
         required_relationships: Optional[Sequence[Union[CorrelationType, str]]] = None,
         conditions: Optional[Sequence[Union[RuleCondition, Dict[str, Any]]]] = None,
         time_window_seconds: Optional[Union[float, int]] = None,
+        severity: Optional[str] = DEFAULT_RULE_SEVERITY,
         attributes: Any = None,
     ) -> None:
         # 1. Validate name
@@ -468,6 +493,9 @@ class DetectionRule:
                 )
             validated_window = float(time_window_seconds)
 
+        # 8b. Validate severity
+        validated_severity = normalize_severity(severity)
+
         # 9. Validate rule_id
         if rule_id is None:
             validated_rule_id = compute_deterministic_rule_id(clean_name, frozen_event_types)
@@ -494,6 +522,7 @@ class DetectionRule:
         object.__setattr__(self, "required_relationships", frozen_relationships)
         object.__setattr__(self, "conditions", frozen_conditions)
         object.__setattr__(self, "time_window_seconds", validated_window)
+        object.__setattr__(self, "severity", validated_severity)
         object.__setattr__(self, "attributes", frozen_attributes)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -508,6 +537,7 @@ class DetectionRule:
             "required_relationships": [r.value for r in self.required_relationships],
             "conditions": [c.to_dict() for c in self.conditions],
             "time_window_seconds": self.time_window_seconds,
+            "severity": self.severity,
             "attributes": unfreeze_to_dict(self.attributes),
         }
 
@@ -529,6 +559,7 @@ class DetectionRule:
                 for c in data.get("conditions", ())
             ],
             time_window_seconds=data.get("time_window_seconds"),
+            severity=data.get("severity", DEFAULT_RULE_SEVERITY),
             attributes=data.get("attributes", {}),
         )
 
@@ -548,6 +579,7 @@ def create_rule(
     required_relationships: Optional[Sequence[Union[CorrelationType, str]]] = None,
     conditions: Optional[Sequence[Union[RuleCondition, Dict[str, Any]]]] = None,
     time_window_seconds: Optional[Union[float, int]] = None,
+    severity: Optional[str] = DEFAULT_RULE_SEVERITY,
     attributes: Any = None,
 ) -> DetectionRule:
     """Convenience factory to construct an immutable DetectionRule."""
@@ -561,6 +593,7 @@ def create_rule(
         required_relationships=required_relationships,
         conditions=conditions,
         time_window_seconds=time_window_seconds,
+        severity=severity,
         attributes=attributes,
     )
 

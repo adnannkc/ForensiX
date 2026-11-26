@@ -1001,10 +1001,30 @@
     const detContainer = document.getElementById("summary-detections-container");
     if (detContainer) {
       clearNode(detContainer);
-      const detections = details && Array.isArray(details.detections) ? details.detections : [];
-      if (detections.length > 0) {
-        const columns = ["Rule Name", "Explanation", "Matched Event IDs", "Source File", "Line Number"];
-        const rows = detections.map(function (d) {
+      const rawDetections = details && Array.isArray(details.detections) ? details.detections : [];
+      if (rawDetections.length > 0) {
+        const sevRank = { critical: 0, high: 1, medium: 2, low: 3 };
+        const normSev = function (val) {
+          if (typeof val === "string") {
+            const c = val.trim().toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(sevRank, c)) return c;
+          }
+          return "medium";
+        };
+        const sortedDetections = rawDetections
+          .map(function (d, idx) {
+            return { det: d, idx: idx, sev: normSev(d && d.severity) };
+          })
+          .sort(function (a, b) {
+            const diff = sevRank[a.sev] - sevRank[b.sev];
+            return diff !== 0 ? diff : a.idx - b.idx;
+          });
+
+        const sevCounts = { critical: 0, high: 0, medium: 0, low: 0 };
+        const columns = ["Severity", "Rule Name", "Explanation", "Matched Event IDs", "Source File", "Line Number"];
+        const rows = sortedDetections.map(function (item) {
+          const d = item.det;
+          sevCounts[item.sev] += 1;
           const eventIds = Array.isArray(d && d.matched_event_ids) ? d.matched_event_ids.join(", ") : "—";
           const attrs = (d && d.attributes) || {};
           const srcFile = (d && d.source_file) || attrs.source_file || attrs.source_path || "—";
@@ -1012,6 +1032,7 @@
             ? String(d.line_number)
             : (attrs.line_number !== undefined && attrs.line_number !== null ? String(attrs.line_number) : "—");
           return [
+            item.sev.toUpperCase(),
             (d && d.rule_name) || "—",
             (d && d.explanation) || "—",
             eventIds || "—",
@@ -1022,12 +1043,18 @@
         renderDomainTable(
           detContainer,
           "Matched Detections",
-          detections.length + (detections.length === 1 ? " Finding" : " Findings"),
-          "Rule matches identified from timeline evidence.",
+          sortedDetections.length + (sortedDetections.length === 1 ? " Finding" : " Findings"),
+          "Rule matches ordered highest severity first.",
           columns,
           rows,
-          detections.length
+          sortedDetections.length
         );
+        const sevBar = el("div", "severity-summary-bar");
+        ["critical", "high", "medium", "low"].forEach(function (lvl) {
+          const label = lvl.charAt(0).toUpperCase() + lvl.slice(1) + ": " + sevCounts[lvl];
+          sevBar.appendChild(el("span", "badge severity-badge severity-" + lvl, label));
+        });
+        detContainer.appendChild(sevBar);
       }
     }
   }

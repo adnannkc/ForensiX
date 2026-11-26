@@ -57,6 +57,7 @@ def create_dns_query_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -135,6 +136,7 @@ def create_dns_query_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -152,6 +154,7 @@ def create_http_request_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -248,6 +251,7 @@ def create_http_request_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -262,6 +266,7 @@ def create_tls_sni_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -327,6 +332,7 @@ def create_tls_sni_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -343,6 +349,7 @@ def create_network_protocol_port_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -433,6 +440,7 @@ def create_network_protocol_port_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -447,6 +455,7 @@ def create_host_network_correlation_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: float = DEFAULT_NETWORK_RULE_TIME_WINDOW_SECONDS,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -503,6 +512,7 @@ def create_host_network_correlation_rule(
         conditions=conditions,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -533,6 +543,7 @@ class NetworkRuleBuilder:
         self._conditions: List[RuleCondition] = []
         self._time_window_seconds: Optional[float] = None
         self._rule_id: Optional[str] = None
+        self._severity: Optional[str] = None
         self._attributes: Dict[str, Any] = {"rule_type": "network_detection"}
 
     def set_description(self, description: str) -> "NetworkRuleBuilder":
@@ -616,6 +627,11 @@ class NetworkRuleBuilder:
         self._rule_id = rule_id.strip()
         return self
 
+    def set_severity(self, severity: str) -> "NetworkRuleBuilder":
+        """Set the rule severity level (critical, high, medium, low)."""
+        self._severity = severity
+        return self
+
     def build(self) -> DetectionRule:
         """
         Validate and construct the immutable DetectionRule.
@@ -631,6 +647,7 @@ class NetworkRuleBuilder:
             conditions=self._conditions if self._conditions else None,
             time_window_seconds=self._time_window_seconds,
             rule_id=self._rule_id,
+            severity=self._severity,
             attributes=self._attributes,
         )
 
@@ -667,6 +684,7 @@ def create_canonical_network_rules() -> RuleCollection:
         rule_name="Baseline DNS Query Domain Observation",
         description="Identifies observed DNS query activity ending in 'example.org'.",
         detection_description="Observed DNS query for a domain ending in 'example.org'.",
+        severity="low",
         attributes={"pattern_id": RULE_NET_01_DNS_OBSERVATION, "baseline": True},
     )
 
@@ -676,6 +694,7 @@ def create_canonical_network_rules() -> RuleCollection:
         rule_name="Baseline HTTP Request Observation",
         description="Identifies observed HTTP communication requesting endpoint '/api/v1/status'.",
         detection_description="Observed HTTP request to '/api/v1/status'.",
+        severity="low",
         attributes={"pattern_id": RULE_NET_02_HTTP_OBSERVATION, "baseline": True},
     )
 
@@ -685,6 +704,7 @@ def create_canonical_network_rules() -> RuleCollection:
         rule_name="Baseline TLS Server Name Indication Observation",
         description="Identifies observed TLS handshake with Server Name Indication 'secure.portal.org'.",
         detection_description="Observed TLS ClientHello with SNI 'secure.portal.org'.",
+        severity="low",
         attributes={"pattern_id": RULE_NET_03_TLS_SNI_OBSERVATION, "baseline": True},
     )
 
@@ -695,6 +715,7 @@ def create_canonical_network_rules() -> RuleCollection:
         rule_name="Baseline SSH Network Port Observation",
         description="Identifies observed network traffic targeting TCP destination port 22.",
         detection_description="Observed network communication directed to TCP destination port 22.",
+        severity="low",
         attributes={"pattern_id": RULE_NET_04_SSH_PORT_OBSERVATION, "baseline": True},
     )
 
@@ -703,6 +724,7 @@ def create_canonical_network_rules() -> RuleCollection:
         rule_name="Baseline Host and Network Correlation Observation",
         description="Identifies correlated host activity temporally associated with network traffic observations.",
         detection_description="Observed host activity temporally associated with network traffic observation within 300 seconds.",
+        severity="medium",
         attributes={"pattern_id": RULE_NET_05_HOST_NETWORK_CORRELATION, "baseline": True},
     )
 

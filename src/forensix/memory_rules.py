@@ -65,6 +65,7 @@ def create_memory_process_name_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -149,6 +150,7 @@ def create_memory_process_name_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -168,6 +170,7 @@ def create_memory_network_socket_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -307,6 +310,7 @@ def create_memory_network_socket_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -321,6 +325,7 @@ def create_memory_process_socket_correlation_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -416,6 +421,7 @@ def create_memory_process_socket_correlation_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -431,6 +437,7 @@ def create_memory_module_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -531,6 +538,7 @@ def create_memory_module_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -545,6 +553,7 @@ def create_memory_parent_child_rule(
     detection_description: Optional[str] = None,
     time_window_seconds: Optional[float] = None,
     rule_id: Optional[str] = None,
+    severity: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
 ) -> DetectionRule:
     """
@@ -647,6 +656,7 @@ def create_memory_parent_child_rule(
         conditions=conds,
         time_window_seconds=time_window_seconds,
         rule_id=rule_id,
+        severity=severity,
         attributes=attrs,
     )
 
@@ -676,6 +686,7 @@ class MemoryRuleBuilder:
         self._conditions: List[RuleCondition] = []
         self._time_window_seconds: Optional[float] = None
         self._rule_id: Optional[str] = None
+        self._severity: Optional[str] = None
         self._attributes: Dict[str, Any] = {"rule_type": "memory_detection"}
 
     def detection_description(self, text: str) -> "MemoryRuleBuilder":
@@ -743,6 +754,11 @@ class MemoryRuleBuilder:
         self._rule_id = rule_id.strip()
         return self
 
+    def set_severity(self, severity: str) -> "MemoryRuleBuilder":
+        """Set the rule severity level (critical, high, medium, low)."""
+        self._severity = severity
+        return self
+
     def build(self) -> DetectionRule:
         """Construct the immutable DetectionRule."""
         det_desc = self._detection_description or self._description
@@ -756,6 +772,7 @@ class MemoryRuleBuilder:
             conditions=self._conditions if self._conditions else None,
             time_window_seconds=self._time_window_seconds,
             rule_id=self._rule_id,
+            severity=self._severity,
             attributes=self._attributes,
         )
 
@@ -791,6 +808,7 @@ def create_canonical_memory_rules() -> RuleCollection:
         rule_name="Baseline Memory Process Name Observation (nc)",
         description="Identifies observed in-memory execution of process named 'nc'.",
         detection_description="Observed in-memory process execution named 'nc'.",
+        severity="medium",
         attributes={"pattern_id": RULE_MEM_01_PROCESS_NAME_OBSERVATION, "baseline": True},
     )
 
@@ -801,6 +819,7 @@ def create_canonical_memory_rules() -> RuleCollection:
         rule_name="Baseline Memory Listening Port Observation (TCP/4444)",
         description="Identifies observed in-memory TCP socket in LISTEN state on port 4444.",
         detection_description="Observed in-memory TCP socket listening on port 4444.",
+        severity="high",
         attributes={"pattern_id": RULE_MEM_02_LISTENING_PORT_OBSERVATION, "baseline": True},
     )
 
@@ -809,6 +828,7 @@ def create_canonical_memory_rules() -> RuleCollection:
         rule_name="Baseline Memory Process Network Socket Correlation",
         description="Identifies observed direct correlation between an in-memory process and an active network socket.",
         detection_description="Observed direct correlation between an in-memory process and network socket via verified PID linkage.",
+        severity="medium",
         attributes={"pattern_id": RULE_MEM_03_PROCESS_SOCKET_CORRELATION, "baseline": True},
     )
 
@@ -818,6 +838,7 @@ def create_canonical_memory_rules() -> RuleCollection:
         rule_name="Baseline Memory Driver Path Review Indicator (/tmp)",
         description="Identifies observed in-memory kernel module or driver loaded from a path containing '/tmp'.",
         detection_description="Observed in-memory kernel module or driver path containing '/tmp' review indicator.",
+        severity="high",
         attributes={"pattern_id": RULE_MEM_04_MODULE_DRIVER_PATH_OBSERVATION, "baseline": True},
     )
 
@@ -826,6 +847,7 @@ def create_canonical_memory_rules() -> RuleCollection:
         rule_name="Baseline Memory Parent-Child Process Relationship",
         description="Identifies observed in-memory parent-child process relationship with direct confidence.",
         detection_description="Observed in-memory parent-child process execution lineage with direct confidence.",
+        severity="low",
         attributes={"pattern_id": RULE_MEM_05_PARENT_CHILD_PROCESS_CORRELATION, "baseline": True},
     )
 

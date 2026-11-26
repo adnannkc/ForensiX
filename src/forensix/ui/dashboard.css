@@ -1191,3 +1191,22 @@ body {
 .row-standalone td {
   font-style: italic;
 }
+
+.severity-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.severity-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.severity-critical { background-color: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+.severity-high { background-color: rgba(249, 115, 22, 0.2); color: #fdba74; }
+.severity-medium { background-color: rgba(234, 179, 8, 0.2); color: #fde047; }
+.severity-low { background-color: rgba(56, 189, 248, 0.2); color: #7dd3fc; }

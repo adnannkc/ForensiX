@@ -47,7 +47,12 @@ from forensix.custody_models import (
     CustodyEvent,
     TimestampSource,
 )
-from forensix.detection_engine import DetectionEngine, DetectionResultCollection
+from forensix.detection_engine import (
+    DetectionEngine,
+    DetectionResultCollection,
+    severity_detection_sort_key,
+)
+from forensix.rule_models import DEFAULT_RULE_SEVERITY
 from forensix.hasher import compute_hashes
 from forensix.account_rules import create_canonical_account_rules
 from forensix.initial_rules import get_initial_rules
@@ -838,12 +843,17 @@ class InvestigationPipeline:
                 "network_packets_analyzed": total_net_pkts,
                 "memory_artifacts_analyzed": len(mem_artifacts),
             }
+            sev_counts: Dict[str, int] = {"critical": 0, "high": 0, "medium": 0, "low": 0}
             if detections:
                 timeline_event_map = {e.event_id: e for e in all_timeline_events}
+                sorted_matched = sorted(
+                    (d for d in detections if d.matched),
+                    key=severity_detection_sort_key,
+                )
                 serialized_detections: List[Dict[str, Any]] = []
-                for det in detections:
-                    if not det.matched:
-                        continue
+                for det in sorted_matched:
+                    sev = det.severity if det.severity in sev_counts else DEFAULT_RULE_SEVERITY
+                    sev_counts[sev] += 1
                     det_dict = det.to_dict()
                     for eid in det.matched_event_ids:
                         ev = timeline_event_map.get(eid)
@@ -856,6 +866,7 @@ class InvestigationPipeline:
                                 break
                     serialized_detections.append(det_dict)
                 report_details["detections"] = serialized_detections
+            report_details["severity_counts"] = sev_counts
             if host_collection and host_collection.artifacts:
                 browser_events = [
                     art.specialized_payload.to_dict()

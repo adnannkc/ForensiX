@@ -44,6 +44,7 @@ from forensix.manifest_verifier import (
     MANIFEST_VERIFICATION_NOTICE,
     ManifestVerificationResult,
 )
+from forensix.rule_models import DEFAULT_RULE_SEVERITY, SEVERITY_RANK, VALID_SEVERITIES
 from forensix.unified_models import HostArtifact, HostArtifactCollection
 
 
@@ -633,10 +634,24 @@ def render_advanced_report_html(report: AdvancedReport) -> str:
         detections_section_html = ""
         det_items = raw_details.get("detections") if isinstance(raw_details, dict) else None
         if isinstance(det_items, list) and det_items:
+            def _norm_det_sev(val: Any) -> str:
+                if isinstance(val, str):
+                    c = val.strip().lower()
+                    if c in SEVERITY_RANK:
+                        return c
+                return DEFAULT_RULE_SEVERITY
+
+            indexed_dets = [
+                (_norm_det_sev(det.get("severity")), idx, det)
+                for idx, det in enumerate(det_items)
+                if isinstance(det, dict)
+            ]
+            indexed_dets.sort(key=lambda item: (SEVERITY_RANK[item[0]], item[1]))
+
+            sev_counts = {s: 0 for s in VALID_SEVERITIES}
             det_rows = []
-            for det in det_items:
-                if not isinstance(det, dict):
-                    continue
+            for sev, _idx, det in indexed_dets:
+                sev_counts[sev] += 1
                 det_attrs = det.get("attributes") if isinstance(det.get("attributes"), dict) else {}
                 matched_ev_ids = det.get("matched_event_ids") or []
                 ev_str = ", ".join(str(eid) for eid in matched_ev_ids) if matched_ev_ids else "None"
@@ -644,6 +659,7 @@ def render_advanced_report_html(report: AdvancedReport) -> str:
                 line_num = det.get("line_number") if det.get("line_number") is not None else det_attrs.get("line_number")
                 det_rows.append(
                     f"<tr>"
+                    f"<td><span class='badge severity-{esc(sev)}'>{esc(sev)}</span></td>"
                     f"<td><strong>{esc(det.get('rule_name'))}</strong></td>"
                     f"<td>{esc(det.get('explanation'))}</td>"
                     f"<td><code>{esc(ev_str)}</code></td>"
@@ -652,10 +668,16 @@ def render_advanced_report_html(report: AdvancedReport) -> str:
                     f"</tr>"
                 )
             if det_rows:
+                sev_pills = "".join(
+                    f"<span class='badge severity-{esc(s)}'>{esc(s.capitalize())}: {sev_counts[s]}</span>"
+                    for s in VALID_SEVERITIES
+                )
                 detections_section_html = (
                     "<h3>Matched Detections</h3>"
+                    f"<div class='severity-summary'>{sev_pills}</div>"
                     "<table class='data-table'>"
                     "<thead><tr>"
+                    "<th>Severity</th>"
                     "<th>Rule Name</th>"
                     "<th>Explanation</th>"
                     "<th>Matched Event IDs</th>"
@@ -777,6 +799,11 @@ def render_advanced_report_html(report: AdvancedReport) -> str:
         .badge-tampered {{ background-color: var(--tampered-bg); color: var(--tampered-text); }}
         .badge-unverified {{ background-color: var(--unverified-bg); color: var(--unverified-text); }}
         .badge-neutral {{ background-color: var(--neutral-bg); color: var(--neutral-text); }}
+        .severity-summary {{ display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.6rem 0 1rem; }}
+        .severity-critical {{ background-color: #7f1d1d; color: #fecaca; }}
+        .severity-high {{ background-color: #7c2d12; color: #fed7aa; }}
+        .severity-medium {{ background-color: #78350f; color: #fde68a; }}
+        .severity-low {{ background-color: #1e3a5f; color: #bfdbfe; }}
         .metrics-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

@@ -31,6 +31,13 @@ RE_PAM_AUTH_FAIL_DETAILED = re.compile(
 
 AUTH_SERVICES = {"sshd", "sudo", "su", "login", "pam", "pam_unix", "polkit"}
 
+_ACCOUNT_LOG_TO_AUTH_EVENT = {
+    LogEventType.USER_ADDED.value: AuthEventType.USER_ADDED.value,
+    LogEventType.USER_MODIFIED.value: AuthEventType.USER_MODIFIED.value,
+    LogEventType.PASSWORD_CHANGED.value: AuthEventType.PASSWORD_CHANGED.value,
+    LogEventType.SSH_KEY_MODIFIED.value: AuthEventType.SSH_KEY_MODIFIED.value,
+}
+
 
 def is_auth_log_source(source_path: str) -> bool:
     """Check if the source path filename corresponds to standard Linux auth logs."""
@@ -223,7 +230,30 @@ def log_event_to_auth_record(log_event: LogEvent) -> Optional[AuthenticationReco
             raw_line=log_event.raw_line,
         )
 
-    # 5. Unclassified events from authentication logs or authentication services
+    # 5. Account lifecycle & SSH key log events (avoid UNKNOWN_AUTH_EVENT classification)
+    if event_type in _ACCOUNT_LOG_TO_AUTH_EVENT:
+        return AuthenticationRecord(
+            auth_id=aid,
+            event_id=log_event.event_id,
+            source_artifact_id=log_event.source_artifact_id,
+            source_path=log_event.source_path,
+            line_number=log_event.line_number,
+            raw_timestamp=log_event.raw_timestamp,
+            normalized_timestamp=log_event.normalized_timestamp,
+            hostname=log_event.hostname,
+            service=log_event.service,
+            event_type=_ACCOUNT_LOG_TO_AUTH_EVENT[event_type],
+            status=AuthStatus.INFO.value,
+            username=log_event.attributes.get("user"),
+            source_ip=None,
+            source_port=None,
+            authentication_method=None,
+            attributes=dict(log_event.attributes),
+            raw_message=log_event.raw_message,
+            raw_line=log_event.raw_line,
+        )
+
+    # 6. Unclassified events from authentication logs or authentication services
     is_auth_src = is_auth_log_source(log_event.source_path)
     is_auth_svc = any(s in svc_lower for s in AUTH_SERVICES)
 

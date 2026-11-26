@@ -62,6 +62,58 @@ RE_SUDO_SESSION_CLOSE = re.compile(
     r"pam_unix\(sudo:session\):\s*session closed for user\s+(\S+)"
 )
 
+# Account Lifecycle & SSH Key Patterns
+RE_USERADD_NEW_USER = re.compile(
+    r"^new\s+user:\s*name=([^,\s]+)(?:,\s*UID=(\d+))?(?:,\s*GID=(\d+))?(?:,\s*home=([^,\s]+))?(?:,\s*shell=([^,\s]+))?",
+    re.IGNORECASE,
+)
+RE_ADDUSER_ADDING = re.compile(
+    r"^Adding\s+(?:new\s+)?user\s+[`'\"]?([^\s`'\"]+)[`'\"]?(?:\s+\((\d+)\))?(?:.*group\s+[`'\"]?([^\s`'\"]+)[`'\"]?)?",
+    re.IGNORECASE,
+)
+RE_USERMOD_ADD_GROUP = re.compile(
+    r"^add\s+['\"]([^'\"]+)['\"]\s+to\s+(?:shadow\s+)?group\s+['\"]([^'\"]+)['\"]",
+    re.IGNORECASE,
+)
+RE_USERMOD_CHANGE_ATTR = re.compile(
+    r"^change\s+user\s+['\"]([^'\"]+)['\"]\s+(shell|home|UID|GID)\s+from\s+['\"]([^'\"]*)['\"]\s+to\s+['\"]([^'\"]*)['\"]",
+    re.IGNORECASE,
+)
+RE_USERMOD_USER_ACTION = re.compile(
+    r"^(change|lock|unlock)\s+user\s+['\"]([^'\"]+)['\"](?:\s+(.*))?$",
+    re.IGNORECASE,
+)
+RE_PASSWD_PAM_CHANGED = re.compile(
+    r"(?:pam_unix\([^)]*:chauthtok\):\s*)?password\s+changed\s+for\s+(\S+)",
+    re.IGNORECASE,
+)
+RE_PASSWD_CHANGED_BY = re.compile(
+    r"^password\s+for\s+['\"]([^'\"]+)['\"]\s+changed\s+by\s+['\"]([^'\"]+)['\"]",
+    re.IGNORECASE,
+)
+RE_AUTHORIZED_KEYS = re.compile(r"authorized_keys", re.IGNORECASE)
+RE_SSH_KEY_CHANGE_VERB = re.compile(
+    r"\b(?:add(?:ed|ing)?|append(?:ed|ing)?|writ(?:e|es|ten|ing)|wrote|modif(?:y|ies|ied|ying)|remov(?:e|es|ed|ing)|delet(?:e|es|ed|ing)|replac(?:e|es|ed|ing)|updat(?:e|es|ed|ing)|creat(?:e|es|ed|ing)|chang(?:e|es|ed|ing)|install(?:ed|ing)?)\b",
+    re.IGNORECASE,
+)
+RE_AUTH_KEYS_PATH_USER = re.compile(
+    r"(?:/(?P<root>root)|/home/(?P<home_user>[^/\s'\"]+))/\.ssh/authorized_keys"
+)
+
+
+def _extract_authorized_keys_attrs(text: str) -> Dict[str, Any]:
+    """Extract key_action and optional user from an authorized_keys log message or command."""
+    key_action = "modified" if RE_SSH_KEY_CHANGE_VERB.search(text) else "referenced"
+    attrs: Dict[str, Any] = {
+        "references_authorized_keys": True,
+        "key_action": key_action,
+        "action": key_action,
+    }
+    m_path = RE_AUTH_KEYS_PATH_USER.search(text)
+    if m_path:
+        attrs["user"] = "root" if m_path.group("root") else m_path.group("home_user")
+    return attrs
+
 
 def iter_log_lines(file_path: Union[str, Path]) -> Iterator[Tuple[int, str]]:
     """
@@ -196,13 +248,17 @@ def classify_log_message(service: Optional[str], message: str) -> Tuple[str, Dic
     if "sudo" in svc_lower:
         m_sudo_cmd = RE_SUDO_COMMAND.search(message)
         if m_sudo_cmd:
-            return LogEventType.SUDO_COMMAND.value, {
+            cmd_str = m_sudo_cmd.group(5).strip()
+            sudo_attrs: Dict[str, Any] = {
                 "sudo_user": m_sudo_cmd.group(1),
                 "tty": m_sudo_cmd.group(2),
                 "pwd": m_sudo_cmd.group(3),
                 "target_user": m_sudo_cmd.group(4),
-                "command": m_sudo_cmd.group(5).strip(),
+                "command": cmd_str,
             }
+            if RE_AUTHORIZED_KEYS.search(cmd_str):
+                sudo_attrs.update(_extract_authorized_keys_attrs(cmd_str))
+            return LogEventType.SUDO_COMMAND.value, sudo_attrs
 
         m_sopen = RE_SUDO_SESSION_OPEN.search(message)
         if m_sopen:
@@ -216,6 +272,75 @@ def classify_log_message(service: Optional[str], message: str) -> Tuple[str, Dic
             return LogEventType.SESSION_CLOSE.value, {
                 "user": m_sclose.group(1),
                 "service": "sudo",
+            }
+
+    # Account creation (useradd / adduser)
+    if "useradd" in svc_lower or "adduser" in svc_lower:
+        m_new_user = RE_USERADD_NEW_USER.search(message)
+        if m_new_user:
+            attrs: Dict[str, Any] = {"user": m_new_user.group(1), "action": "create_user"}
+            if m_new_user.group(2):
+                attrs["uid"] = int(m_new_user.group(2))
+            if m_new_user.group(3):
+                attrs["gid"] = int(m_new_user.group(3))
+            if m_new_user.group(4):
+                attrs["home"] = m_new_user.group(4)
+            if m_new_user.group(5):
+                attrs["shell"] = m_new_user.group(5)
+            return LogEventType.USER_ADDED.value, attrs
+
+        m_adduser = RE_ADDUSER_ADDING.search(message)
+        if m_adduser:
+            attrs = {"user": m_adduser.group(1), "action": "create_user"}
+            if m_adduser.group(2):
+                attrs["uid"] = int(m_adduser.group(2))
+            if m_adduser.group(3):
+                attrs["group"] = m_adduser.group(3)
+            return LogEventType.USER_ADDED.value, attrs
+
+    # Account modification (usermod)
+    if "usermod" in svc_lower:
+        m_mod_grp = RE_USERMOD_ADD_GROUP.search(message)
+        if m_mod_grp:
+            return LogEventType.USER_MODIFIED.value, {
+                "user": m_mod_grp.group(1),
+                "group": m_mod_grp.group(2),
+                "action": "add_to_group",
+            }
+
+        m_mod_attr = RE_USERMOD_CHANGE_ATTR.search(message)
+        if m_mod_attr:
+            field = m_mod_attr.group(2).lower()
+            new_val = m_mod_attr.group(4)
+            attrs = {"user": m_mod_attr.group(1), "action": f"change_{field}"}
+            attrs[field] = int(new_val) if field in ("uid", "gid") and new_val.isdigit() else new_val
+            return LogEventType.USER_MODIFIED.value, attrs
+
+        m_mod_act = RE_USERMOD_USER_ACTION.search(message)
+        if m_mod_act:
+            verb = m_mod_act.group(1).lower()
+            suffix = (m_mod_act.group(3) or "").lower()
+            action = f"{verb}_password" if "password" in suffix else verb
+            return LogEventType.USER_MODIFIED.value, {
+                "user": m_mod_act.group(2),
+                "action": action,
+            }
+
+    # Password changes (passwd / chpasswd / pam_unix chauthtok)
+    if "passwd" in svc_lower or "chpasswd" in svc_lower or "chauthtok" in message.lower():
+        m_pw_by = RE_PASSWD_CHANGED_BY.search(message)
+        if m_pw_by:
+            return LogEventType.PASSWORD_CHANGED.value, {
+                "user": m_pw_by.group(1),
+                "changed_by": m_pw_by.group(2),
+                "action": "password_changed",
+            }
+
+        m_pw_pam = RE_PASSWD_PAM_CHANGED.search(message)
+        if m_pw_pam:
+            return LogEventType.PASSWORD_CHANGED.value, {
+                "user": m_pw_pam.group(1),
+                "action": "password_changed",
             }
 
     # General Session Management (PAM / systemd / login)
@@ -232,6 +357,10 @@ def classify_log_message(service: Optional[str], message: str) -> Tuple[str, Dic
             "user": m_close.group(1),
             "service": service or "unknown",
         }
+
+    # Other syslog lines mentioning authorized_keys
+    if RE_AUTHORIZED_KEYS.search(message):
+        return LogEventType.SSH_KEY_MODIFIED.value, _extract_authorized_keys_attrs(message)
 
     # Default recognized syslog
     return LogEventType.GENERIC_SYSLOG.value, {}
@@ -290,6 +419,14 @@ def parse_log_line(
 
     raw_ts, norm_ts, hostname, service, pid, msg = header
     event_type, attributes = classify_log_message(service, msg)
+    if event_type in (
+        LogEventType.USER_ADDED.value,
+        LogEventType.USER_MODIFIED.value,
+        LogEventType.PASSWORD_CHANGED.value,
+        LogEventType.SSH_KEY_MODIFIED.value,
+    ) or attributes.get("references_authorized_keys"):
+        attributes = dict(attributes)
+        attributes["line_number"] = line_number
 
     return LogEvent(
         event_id=event_id,

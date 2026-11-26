@@ -574,6 +574,22 @@ def resolve_field_value(target: Any, field_name: str) -> Any:
     return _MISSING
 
 
+def _resolve_detection_explanation(
+    rule: DetectionRule,
+    candidate_events: Sequence[TimelineEvent],
+) -> str:
+    """Resolve an observational detection explanation from rule metadata and event attributes."""
+    rule_attrs = unfreeze_to_dict(rule.attributes) if rule.attributes else {}
+    explanations_map = rule_attrs.get("key_action_explanations")
+    if isinstance(explanations_map, dict) and candidate_events:
+        key_action = resolve_field_value(candidate_events[0], "key_action")
+        if key_action == "modified" and isinstance(explanations_map.get("modified"), str):
+            return explanations_map["modified"]
+        if isinstance(explanations_map.get("referenced"), str):
+            return explanations_map["referenced"]
+    return rule.detection_description
+
+
 def evaluate_condition_operator(
     actual: Any,
     operator: ConditionOperator,
@@ -925,7 +941,7 @@ class DetectionEngine:
                                     start_timestamp=corr.start_timestamp,
                                     end_timestamp=corr.end_timestamp,
                                     time_delta_seconds=corr.time_delta_seconds,
-                                    explanation=rule.detection_description,
+                                    explanation=_resolve_detection_explanation(rule, corr_events),
                                     attributes={
                                         "relationship_type": corr.relationship_type.value,
                                         "rule_description": rule.description,
@@ -973,7 +989,7 @@ class DetectionEngine:
                                     start_timestamp=ev.timestamp,
                                     end_timestamp=ev.timestamp,
                                     time_delta_seconds=0.0 if ev.timestamp else None,
-                                    explanation=rule.detection_description,
+                                    explanation=_resolve_detection_explanation(rule, [ev]),
                                     attributes={"rule_description": rule.description},
                                 )
                                 detections.append(det)
@@ -1018,7 +1034,7 @@ class DetectionEngine:
                                         start_timestamp=first_ev.timestamp,
                                         end_timestamp=last_ev.timestamp,
                                         time_delta_seconds=seq_delta,
-                                        explanation=rule.detection_description,
+                                        explanation=_resolve_detection_explanation(rule, current_seq),
                                         attributes={"rule_description": rule.description},
                                     )
                                     detections.append(det)

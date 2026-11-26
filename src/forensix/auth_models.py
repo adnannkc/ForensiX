@@ -20,6 +20,10 @@ class AuthEventType(str, Enum):
     SESSION_OPEN = "session_open"
     SESSION_CLOSE = "session_close"
     SUDO_COMMAND = "sudo_command"
+    USER_ADDED = "user_added"
+    USER_MODIFIED = "user_modified"
+    PASSWORD_CHANGED = "password_changed"
+    SSH_KEY_MODIFIED = "ssh_key_modified"
     AUTHENTICATION_FAILURE = "authentication_failure"
     UNKNOWN_AUTH_EVENT = "unknown_auth_event"
 

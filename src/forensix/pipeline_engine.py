@@ -49,6 +49,7 @@ from forensix.custody_models import (
 )
 from forensix.detection_engine import DetectionEngine, DetectionResultCollection
 from forensix.hasher import compute_hashes
+from forensix.account_rules import create_canonical_account_rules
 from forensix.initial_rules import get_initial_rules
 from forensix.manifest_models import ManifestEntry, ManifestRecord
 from forensix.manifest_verifier import (
@@ -775,7 +776,12 @@ class InvestigationPipeline:
         st9_t0 = time.perf_counter()
         if "detection" in self.config.enabled_domains and all_timeline_events:
             # Combine canonical rules across all domains
-            combined_rules = list(get_initial_rules()) + list(create_canonical_network_rules()) + list(create_canonical_memory_rules())
+            combined_rules = (
+                list(get_initial_rules())
+                + list(create_canonical_network_rules())
+                + list(create_canonical_memory_rules())
+                + list(create_canonical_account_rules())
+            )
             detect_engine = DetectionEngine(combined_rules)
             detections = detect_engine.evaluate(all_timeline_events, correlations=correlations)
             st9_dur = time.perf_counter() - st9_t0
@@ -833,9 +839,23 @@ class InvestigationPipeline:
                 "memory_artifacts_analyzed": len(mem_artifacts),
             }
             if detections:
-                report_details["detections"] = [
-                    d.to_dict() for d in detections if d.matched
-                ]
+                timeline_event_map = {e.event_id: e for e in all_timeline_events}
+                serialized_detections: List[Dict[str, Any]] = []
+                for det in detections:
+                    if not det.matched:
+                        continue
+                    det_dict = det.to_dict()
+                    for eid in det.matched_event_ids:
+                        ev = timeline_event_map.get(eid)
+                        if ev is not None:
+                            if ev.source_path and not det_dict.get("source_file"):
+                                det_dict["source_file"] = ev.source_path
+                            if ev.source_line is not None and det_dict.get("line_number") is None:
+                                det_dict["line_number"] = ev.source_line
+                            if det_dict.get("source_file") and det_dict.get("line_number") is not None:
+                                break
+                    serialized_detections.append(det_dict)
+                report_details["detections"] = serialized_detections
             if host_collection and host_collection.artifacts:
                 browser_events = [
                     art.specialized_payload.to_dict()

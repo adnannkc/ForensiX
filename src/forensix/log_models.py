@@ -21,6 +21,10 @@ class LogEventType(str, Enum):
     SUDO_COMMAND = "sudo_command"
     SESSION_OPEN = "session_open"
     SESSION_CLOSE = "session_close"
+    USER_ADDED = "user_added"
+    USER_MODIFIED = "user_modified"
+    PASSWORD_CHANGED = "password_changed"
+    SSH_KEY_MODIFIED = "ssh_key_modified"
     GENERIC_SYSLOG = "generic_syslog"
     UNKNOWN_FORMAT = "unknown_format"
 

@@ -629,10 +629,47 @@ def render_advanced_report_html(report: AdvancedReport) -> str:
     # 4. Details Section (if present)
     details_html = ""
     if report.details:
-        details_json = json.dumps(report.to_dict().get("details", {}), indent=2, sort_keys=True, ensure_ascii=False)
+        raw_details = report.to_dict().get("details", {})
+        detections_section_html = ""
+        det_items = raw_details.get("detections") if isinstance(raw_details, dict) else None
+        if isinstance(det_items, list) and det_items:
+            det_rows = []
+            for det in det_items:
+                if not isinstance(det, dict):
+                    continue
+                det_attrs = det.get("attributes") if isinstance(det.get("attributes"), dict) else {}
+                matched_ev_ids = det.get("matched_event_ids") or []
+                ev_str = ", ".join(str(eid) for eid in matched_ev_ids) if matched_ev_ids else "None"
+                src_file = det.get("source_file") or det_attrs.get("source_file") or det_attrs.get("source_path")
+                line_num = det.get("line_number") if det.get("line_number") is not None else det_attrs.get("line_number")
+                det_rows.append(
+                    f"<tr>"
+                    f"<td><strong>{esc(det.get('rule_name'))}</strong></td>"
+                    f"<td>{esc(det.get('explanation'))}</td>"
+                    f"<td><code>{esc(ev_str)}</code></td>"
+                    f"<td><span class='path-cell'>{esc(src_file) if src_file else '<em>None</em>'}</span></td>"
+                    f"<td class='num'>{esc(line_num) if line_num is not None else '<em>None</em>'}</td>"
+                    f"</tr>"
+                )
+            if det_rows:
+                detections_section_html = (
+                    "<h3>Matched Detections</h3>"
+                    "<table class='data-table'>"
+                    "<thead><tr>"
+                    "<th>Rule Name</th>"
+                    "<th>Explanation</th>"
+                    "<th>Matched Event IDs</th>"
+                    "<th>Source File</th>"
+                    "<th class='num'>Line Number</th>"
+                    "</tr></thead>"
+                    f"<tbody>{''.join(det_rows)}</tbody>"
+                    "</table>"
+                )
+        details_json = json.dumps(raw_details, indent=2, sort_keys=True, ensure_ascii=False)
         details_html = f"""
         <div class="card">
             <h2>Investigation Details</h2>
+            {detections_section_html}
             <details>
                 <summary>Click to view granular details JSON</summary>
                 <pre class="code-box">{esc(details_json)}</pre>

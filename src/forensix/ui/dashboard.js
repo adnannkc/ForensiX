@@ -997,6 +997,39 @@
       card.appendChild(desc);
       grid.appendChild(card);
     });
+
+    const detContainer = document.getElementById("summary-detections-container");
+    if (detContainer) {
+      clearNode(detContainer);
+      const detections = details && Array.isArray(details.detections) ? details.detections : [];
+      if (detections.length > 0) {
+        const columns = ["Rule Name", "Explanation", "Matched Event IDs", "Source File", "Line Number"];
+        const rows = detections.map(function (d) {
+          const eventIds = Array.isArray(d && d.matched_event_ids) ? d.matched_event_ids.join(", ") : "—";
+          const attrs = (d && d.attributes) || {};
+          const srcFile = (d && d.source_file) || attrs.source_file || attrs.source_path || "—";
+          const lineNo = (d && d.line_number !== undefined && d.line_number !== null)
+            ? String(d.line_number)
+            : (attrs.line_number !== undefined && attrs.line_number !== null ? String(attrs.line_number) : "—");
+          return [
+            (d && d.rule_name) || "—",
+            (d && d.explanation) || "—",
+            eventIds || "—",
+            srcFile,
+            lineNo,
+          ];
+        });
+        renderDomainTable(
+          detContainer,
+          "Matched Detections",
+          detections.length + (detections.length === 1 ? " Finding" : " Findings"),
+          "Rule matches identified from timeline evidence.",
+          columns,
+          rows,
+          detections.length
+        );
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------

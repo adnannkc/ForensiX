@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 9.4.0
+
+- Each detection rule has a severity: critical, high, medium, or low.
+- Findings in the report and dashboard are listed highest severity first, with counts per severity.
+- Severity is shown for each finding, and older reports without a severity still load.
+
 ## 9.3.0
 
 - New user accounts, password changes, and SSH key changes are detected from log lines.

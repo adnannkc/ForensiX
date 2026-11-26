@@ -17,6 +17,7 @@ Think of it as a careful assistant that never touches the original evidence:
 5. It reads network capture files and memory dumps, and adds them to the same picture.
 6. It writes reports you can open in a browser or a spreadsheet.
 7. **What it detects:** new user accounts, password changes, and SSH key changes from log lines.
+8. Findings are ranked by severity (critical, high, medium, low), so the most serious appear first.
 
 The newest command, `forensix run`, does all of this in one step from a single case file.
 
@@ -39,7 +40,7 @@ python3 -m pip install .
 forensix --version
 ```
 
-The last command should print `ForensiX 9.3.0`.
+The last command should print `ForensiX 9.4.0`.
 
 ## Quick Start
 
@@ -131,7 +132,7 @@ ForensiX was built one version at a time. Each version added one job.
 PYTHONPATH=src python3 -m pytest -q
 ```
 
-The expected result is `1894 passed, 302 subtests passed`.
+The expected result is `1899 passed, 302 subtests passed`.
 
 ## What ForensiX Does Not Do
 

@@ -38,11 +38,17 @@ python3 -m pip install .
 forensix --version
 ```
 
-The last command should print `ForensiX 9.0.0`.
+The last command should print `ForensiX 9.2.0`.
 
 ## Quick Start
 
-ForensiX includes a small made-up case so you can try it safely:
+Run a full case with default settings by passing an evidence folder:
+
+```bash
+forensix <evidence-folder>
+```
+
+ForensiX also includes a small made-up case so you can try it safely:
 
 ```bash
 forensix case --config examples/case-synthetic/case.json -o reports/ --overwrite --show-findings
@@ -60,7 +66,11 @@ Matches are observations to review, not conclusions about compromise.
 
 ### Dashboard
 
-`forensix case --serve` opens the local dashboard on 127.0.0.1 after the run, and Ctrl+C stops it.
+```bash
+forensix dashboard <report.json>
+```
+
+`forensix case --serve` also opens the local dashboard on 127.0.0.1 after the run, and Ctrl+C stops it.
 
 ## Commands
 
@@ -120,7 +130,7 @@ ForensiX was built one version at a time. Each version added one job.
 PYTHONPATH=src python3 -m pytest -q
 ```
 
-The expected result is `1768 passed, 284 subtests passed`.
+The expected result is `1887 passed, 302 subtests passed`.
 
 ## What ForensiX Does Not Do
 

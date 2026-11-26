@@ -2,14 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## 9.1.0
+## 9.2.0
+
+- Browser history (Firefox and Chromium) is now analyzed in the case pipeline.
+- Browser discovery is strict: only real profile paths for Linux, Windows, and macOS are matched.
+- Correlation is much faster, with time windows and a per-run cap of 50,000 links. The report and dashboard state when the cap is reached.
+- Dashboard labels are clearer: separate counts for artifacts and timeline events, a "Cases" heading, and one consistent cap message.
+- Running `forensix <evidence-folder>` runs a full case with default settings.
+- Output folders (`reports/`, `reports-clean/`, `reports-small/`, `reports-browser/`) are ignored by git.
+
+## 9.1.0 — 2026-11-09
 
 - Fixed: authentication and log timeline events use evidence-relative source_path (no analyst home directory in output).
 - Changed: timeline --source-path expects evidence-relative paths; absolute-path filters return no results.
 - Changed: SAME_PATH correlation can now link authentication and filesystem events that share a relative path. Sample count unchanged (152); may differ on other evidence.
-
-## 9.1.0 — 2026-11-09
-
 - Timeline now keeps one event per source log line. Sample detections change from 7 to 5: the sudo rule previously counted the same login and command three times.
 - `3c9b26d` feat: add SHA-512 to the hashing module
 - `b0d7a97` docs: document forensix case and --show-findings in README
